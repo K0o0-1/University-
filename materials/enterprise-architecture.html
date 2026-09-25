@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#3b82f6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Enterprise Architecture</title>
+<link rel="manifest" id="manifestLink">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233b82f6'/><text x='50' y='65' font-size='55' text-anchor='middle' fill='white' font-family='Arial'>📘</text></svg>">
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="sticky-bar" id="stickyBar"><div class="sb-text" id="sbText">القسم: —</div><div class="sb-progress"><div id="sbFill"></div></div><div class="sb-text" id="sbPct">0%</div></div>
+<header>
+  <h1>Enterprise Architecture</h1><p>بنك 160 سؤال — دراسة / اختبار / بطاقات</p>
+  <div class="topbar">
+    <button data-action="mode-study" class="active">📖 دراسة</button>
+    <button data-action="mode-quiz">📝 اختبار</button>
+    <button data-action="mode-flash">🎴 بطاقات</button>
+    <button data-action="focus">🎯 تركيز</button>
+    <button data-action="toggle-reveal" id="toggleRevealBtn">👁 إظهار الكل</button>
+    <button data-action="shuffle">🔀 خلط</button>
+    <button data-action="stats">📊 إحصائيات</button>
+    <button data-action="reset">♻️ إعادة ضبط</button>
+    <button data-action="dark">🌙 ليلي</button>
+    <button data-action="install" id="installBtn" style="display:none">📲 تثبيت</button>
+    <button data-action="print">🖨 طباعة</button>
+    <button data-action="export-menu">📤 تصدير/استيراد</button>
+  </div>
+</header>
+<div class="stats">
+  <div class="stat">التقدم <b id="statProgress">0/160</b></div><div class="stat">⭐ مفضلة <b id="statFav">0</b></div><div class="stat">✔ أتقنتها <b id="statMastered">0</b></div><div class="stat">📊 النتيجة <b id="statScore">—</b></div><div class="stat streak">🔥 السلسلة <b id="statStreak">0</b></div><div class="stat time">⏱ الوقت <b id="statTime">—</b></div>
+</div>
+<div class="progress-wrap"><div class="progress-bar"><div id="progressFill"></div></div></div>
+<div class="filterbar"><input id="search" type="search" placeholder="🔍 ابحث في الأسئلة أو الخيارات…"><select id="secFilter"><option value="">كل الأقسام</option></select><select id="sortBy"><option value="default">الترتيب الأصلي</option><option value="wrong">الأكثر خطأً</option><option value="unmastered">غير المتقنة</option><option value="fav">المفضلة فقط</option></select><button id="clearBtn" type="button" style="padding:10px 16px;border-radius:10px;border:0;background:var(--brand);color:#fff;font-family:inherit;cursor:pointer;font-weight:700">مسح</button></div>
+<nav class="index" id="index" aria-label="فهرس الأقسام"><h2>فهرس الأقسام</h2></nav>
+<div class="quiz-result" id="quizResult"><h3>📝 نتيجة الاختبار</h3><span class="big" id="qrScore">0 / 0</span><p id="qrMsg" style="text-align:center;margin-top:8px"></p><div class="qr-actions"><button class="qr-primary" onclick="retryWrongOnly()">🔁 أعد الأخطاء فقط</button><button class="qr-secondary" onclick="location.reload()">🔄 اختبار جديد</button><button class="qr-danger" onclick="document.getElementById('quizResult').classList.remove('show')">✖ إغلاق</button></div><div class="qr-review" id="qrReview"></div></div>
+<main id="main"></main>
+<div class="flash-wrap" id="flashWrap"><div class="flash-card" id="flashCard"><div class="fc-q" id="fcQ">—</div><div class="fc-ans" id="fcA">—</div></div><div class="flash-nav"><button onclick="flashNext()">التالي </button><button onclick="flashPrev()">السابق</button></div></div>
+<p class="empty-msg" id="emptyMsg">لا توجد نتائج مطابقة.</p>
+<div class="focus-nav" id="focusNav"><button onclick="focusNext()">التالي </button><button class="exit" onclick="exitFocusMode()">✖ خروج</button><button onclick="focusPrev()"> السابق</button></div>
+<div class="modal" id="resetModal"><div class="modal-card"><h3>♻️ إعادة الضبط</h3><p>اختر ما تريد إعادة ضبطه:</p><div class="reset-options"><label><input type="checkbox" id="resetAll"> <b>الكل (تحديد الجميع)</b></label><hr><label><input type="checkbox" value="fav"> ⭐ المفضلة</label><label><input type="checkbox" value="mastered"> ✔ الأسئلة المتقنة</label><label><input type="checkbox" value="wrong"> 📊 عدّاد الأخطاء</label><label><input type="checkbox" value="revealed"> 👁 الإجابات المكتشفة</label><label><input type="checkbox" value="quiz"> 📝 نتيجة الاختبار والمؤقت والسلسلة</label></div><div class="modal-actions"><button id="resetCancel" class="btn-secondary">إلغاء</button><button id="resetConfirm" class="btn-primary">تأكيد الإعادة</button></div></div></div>
+<div class="modal" id="statsModal"><div class="modal-card" style="max-width:640px"><h3>📊 إحصائيات مفصلة</h3><div id="statsContent"></div><div class="modal-actions"><button class="btn-secondary" onclick="document.getElementById('statsModal').classList.remove('show')">إغلاق</button></div></div></div>
+<div class="modal" id="exportMenuModal"><div class="modal-card"><h3>📤 تصدير / استيراد</h3><p>اختر ما تريد:</p><div class="menu-list"><button data-menu="csv-all"><span class="icon">📄</span><span>تصدير كل الأسئلة CSV</span></button><button data-menu="csv-fav"><span class="icon">⭐</span><span>تصدير المفضلة فقط CSV</span></button><button data-menu="backup"><span class="icon">💾</span><span>نسخة احتياطية كاملة (JSON)</span></button><button data-menu="restore"><span class="icon">📂</span><span>استعادة من نسخة احتياطية</span></button></div><div class="modal-actions"><button class="btn-secondary" onclick="document.getElementById('exportMenuModal').classList.remove('show')">إغلاق</button></div></div></div>
+<div class="modal" id="restoreModal"><div class="modal-card"><h3>📂 استعادة نسخة احتياطية</h3><p>اختر ملف JSON كان قد تم تنزيله سابقًا:</p><input type="file" id="restoreFile" accept=".json" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-family:inherit"><div class="modal-actions"><button class="btn-secondary" onclick="document.getElementById('restoreModal').classList.remove('show')">إلغاء</button><button id="restoreConfirm" class="btn-primary">استعادة</button></div></div></div>
+<div class="cert" id="certModal"><div class="cert-card"><h2>🎓 شهادة إتمام</h2><div class="seal">🏆</div><p>أتممت بنجاح جميع أسئلة بنك <b>Enterprise Architecture</b></p><p id="certScore" style="font-weight:700;color:var(--ok)"></p><button onclick="document.getElementById('certModal').classList.remove('show')">إغلاق</button></div></div>
+<div class="streak-popup" id="streakPopup">🔥</div><div class="toast" id="toast"></div>
+<footer class="signature" aria-label="Author credit"><a class="signature-card" href="https://wa.me/967771179020" target="_blank" rel="noopener noreferrer" title="Contact Eng. Khalid Al-sofi on WhatsApp"><span class="signature-kicker">DESIGNED &amp; ENGINEERED BY</span><strong>Eng. Khalid Al-sofi</strong><span class="signature-contact">WHATSAPP • +967 771 179 020</span></a></footer>
+<div class="scroll-btns"><button id="toTop" title="للأعلى">▲</button><button id="toBottom" title="للأسفل">▼</button></div>
+<script src="../data/enterprise-architecture.js"></script><script src="../assets/mcq-engine.js"></script>
+</body></html>
