@@ -81,16 +81,6 @@ Then open:
 University-/index.html
 ```
 
-## Deployment
-
-The website is deployed through GitHub Pages from:
-
-```text
-Branch: main
-Folder: / (root)
-```
-
-Any committed changes to the published branch can be deployed automatically by GitHub Pages.
 
 ## Updating Study Content
 
