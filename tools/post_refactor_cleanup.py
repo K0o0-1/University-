@@ -41,6 +41,12 @@ for name in ['mcq-engine.js','qa-engine.js']:
 
     path.write_text(text, encoding='utf-8')
 
+# MCQ and Q&A use different score wording.
+mcq = ROOT / 'assets' / 'mcq-engine.js'
+text = mcq.read_text(encoding='utf-8')
+text = text.replace("c + ' أعرفها / ' + w + ' لا أعرفها'", "c + ' صح / ' + w + ' خطأ'")
+mcq.write_text(text, encoding='utf-8')
+
 qa = ROOT / 'assets' / 'qa-engine.js'
 text = qa.read_text(encoding='utf-8')
 old = """  if (showBtn) {\n    const card = showBtn.closest('.q');\n    card.classList.add('revealed');\n    state.revealed[card.dataset.qid] = true;\n    saveState();\n    e.stopPropagation();\n    return;\n  }\n"""
