@@ -1,0 +1,26 @@
+name: Validate study materials
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate data and references
+        run: python3 tools/validate.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/mcq-engine.js
+          node --check assets/qa-engine.js
+          node --check assets/runtime-fixes.js
+          node --check data/enterprise-architecture.js
+          node --check data/flutter-mcq.js
+          node --check data/security-mcq.js
+          node --check data/security-qa.js
+          node --check sw.js
