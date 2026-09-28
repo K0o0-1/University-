@@ -18,7 +18,6 @@ for name in ['mcq-engine.js','qa-engine.js']:
     if duplicate_visible in text:
         text = text.replace(duplicate_visible, '', 1)
 
-    # If a review result is open and the user changes filters, return to study cleanly.
     old_apply = """function applyFilters(){\n  if (quizStarted) return;\n  restoreOriginalLayout();\n"""
     new_apply = """function applyFilters(){\n  if (quizStarted) return;\n  if (currentMode === 'review') {\n    currentMode = 'study';\n    ALL_Q.forEach(q => {\n      q.el.classList.remove('quiz-mode', 'answered', 'grade-correct-mark', 'grade-wrong-mark');\n      q.el.classList.toggle('revealed', !!state.revealed[q.id]);\n    });\n    activeQuizIds = [];\n    quizAnswers = {};\n  }\n  restoreOriginalLayout();\n"""
     if old_apply in text:
@@ -26,14 +25,25 @@ for name in ['mcq-engine.js','qa-engine.js']:
     elif new_apply not in text:
         raise SystemExit(f'{name}: applyFilters block not found')
 
+    # Revealing/hiding one card in study mode must update progress immediately.
+    old_study = """    state.revealed[qid] = card.classList.contains('revealed');\n    saveState();\n"""
+    new_study = """    state.revealed[qid] = card.classList.contains('revealed');\n    saveState();\n    updateStats();\n"""
+    if old_study in text:
+        text = text.replace(old_study, new_study, 1)
+    elif new_study not in text:
+        raise SystemExit(f'{name}: study reveal block not found')
+
     path.write_text(text, encoding='utf-8')
 
 qa = ROOT / 'assets' / 'qa-engine.js'
 text = qa.read_text(encoding='utf-8')
 old = """  if (showBtn) {\n    const card = showBtn.closest('.q');\n    card.classList.add('revealed');\n    state.revealed[card.dataset.qid] = true;\n    saveState();\n    e.stopPropagation();\n    return;\n  }\n"""
-new = """  if (showBtn) {\n    const card = showBtn.closest('.q');\n    card.classList.add('revealed');\n    if (currentMode === 'study') {\n      state.revealed[card.dataset.qid] = true;\n      saveState();\n    }\n    e.stopPropagation();\n    return;\n  }\n"""
+new = """  if (showBtn) {\n    const card = showBtn.closest('.q');\n    card.classList.add('revealed');\n    if (currentMode === 'study') {\n      state.revealed[card.dataset.qid] = true;\n      saveState();\n      updateStats();\n    }\n    e.stopPropagation();\n    return;\n  }\n"""
+old_v2 = """  if (showBtn) {\n    const card = showBtn.closest('.q');\n    card.classList.add('revealed');\n    if (currentMode === 'study') {\n      state.revealed[card.dataset.qid] = true;\n      saveState();\n    }\n    e.stopPropagation();\n    return;\n  }\n"""
 if old in text:
     text = text.replace(old, new, 1)
+elif old_v2 in text:
+    text = text.replace(old_v2, new, 1)
 elif new not in text:
     raise SystemExit('qa-engine.js: show answer block not found')
 qa.write_text(text, encoding='utf-8')
