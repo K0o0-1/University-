@@ -693,6 +693,7 @@ function switchMode(mode){
     activeQuizIds = [];
     quizAnswers = {};
     applyFilters();
+    updateStats();
   }
   if (mode === 'flash') { flashIdx = 0; updateFlash(); }
 }
