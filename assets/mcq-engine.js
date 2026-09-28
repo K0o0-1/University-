@@ -390,6 +390,7 @@ document.addEventListener('click', (e) => {
     card.classList.toggle('revealed');
     state.revealed[qid] = card.classList.contains('revealed');
     saveState();
+    updateStats();
   }
 });
 

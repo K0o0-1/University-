@@ -353,6 +353,7 @@ document.addEventListener('click', (e) => {
     if (currentMode === 'study') {
       state.revealed[card.dataset.qid] = true;
       saveState();
+      updateStats();
     }
     e.stopPropagation();
     return;
@@ -406,6 +407,7 @@ document.addEventListener('click', (e) => {
     card.classList.toggle('revealed');
     state.revealed[card.dataset.qid] = card.classList.contains('revealed');
     saveState();
+    updateStats();
   }
 });
 
