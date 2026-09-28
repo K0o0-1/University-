@@ -835,3 +835,9 @@ body.dark .material-card,body.dark .hub-note{background:#151d2d;border-color:#2d
   .answer-box .ans-text{color:#166534 !important;font-weight:700 !important}
   body.hub-page .material-grid{grid-template-columns:repeat(2,1fr)}
 }
+
+/* Quiz/filter state refinements */
+.filterbar :disabled, .topbar button:disabled { opacity:.5; cursor:not-allowed; }
+#stopQuizFloatBtn { background:var(--err,#dc2626); color:#fff; font-weight:900; }
+#resumeQuizModal .modal-card p { line-height:1.9; }
+#sorted-results > .sec-title { position:sticky; top:58px; z-index:3; }
