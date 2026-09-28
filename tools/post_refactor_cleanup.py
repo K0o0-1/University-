@@ -8,9 +8,12 @@ for name in ['mcq-engine.js','qa-engine.js']:
     text = path.read_text(encoding='utf-8')
 
     old = """  if (mode !== 'quiz') {\n    ALL_Q.forEach(q => q.el.classList.remove('quiz-mode', 'answered', 'grade-correct-mark', 'grade-wrong-mark'));\n    applyFilters();\n  }\n"""
-    new = """  if (mode !== 'quiz') {\n    ALL_Q.forEach(q => {\n      q.el.classList.remove('quiz-mode', 'answered', 'grade-correct-mark', 'grade-wrong-mark');\n      q.el.classList.toggle('revealed', mode === 'study' && !!state.revealed[q.id]);\n    });\n    activeQuizIds = [];\n    quizAnswers = {};\n    applyFilters();\n  }\n"""
+    current = """  if (mode !== 'quiz') {\n    ALL_Q.forEach(q => {\n      q.el.classList.remove('quiz-mode', 'answered', 'grade-correct-mark', 'grade-wrong-mark');\n      q.el.classList.toggle('revealed', mode === 'study' && !!state.revealed[q.id]);\n    });\n    activeQuizIds = [];\n    quizAnswers = {};\n    applyFilters();\n  }\n"""
+    new = """  if (mode !== 'quiz') {\n    ALL_Q.forEach(q => {\n      q.el.classList.remove('quiz-mode', 'answered', 'grade-correct-mark', 'grade-wrong-mark');\n      q.el.classList.toggle('revealed', mode === 'study' && !!state.revealed[q.id]);\n    });\n    activeQuizIds = [];\n    quizAnswers = {};\n    applyFilters();\n    updateStats();\n  }\n"""
     if old in text:
         text = text.replace(old, new, 1)
+    elif current in text:
+        text = text.replace(current, new, 1)
     elif new not in text:
         raise SystemExit(f'{name}: switchMode block not found')
 
@@ -41,7 +44,6 @@ for name in ['mcq-engine.js','qa-engine.js']:
 
     path.write_text(text, encoding='utf-8')
 
-# MCQ and Q&A use different score wording.
 mcq = ROOT / 'assets' / 'mcq-engine.js'
 text = mcq.read_text(encoding='utf-8')
 text = text.replace("c + ' أعرفها / ' + w + ' لا أعرفها'", "c + ' صح / ' + w + ' خطأ'")
