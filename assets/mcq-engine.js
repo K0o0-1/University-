@@ -8,7 +8,7 @@ const SECTIONS = window.MATERIAL_DATA?.sections || [];
    الحالة العامة
    ========================================================= */
 const LS_KEY = MATERIAL.storageKey || 'study_mcq_state_v1';
-const QID = (n) => 'q' + n;
+const LEGACY_QID = (n) => 'q' + n;
 let currentMode = 'study';
 let focusMode = false;
 let focusIdx = 0;
@@ -25,15 +25,132 @@ const state = {
   dark:false, revealed:{}, mastered:{}, fav:{},
   wrong:{}, correct:{}, quizScore:{c:0,w:0},
   streak:0, bestStreak:0,
-  quizSession:null
+  quizSession:null, lastQuizWrongIds:[], stateVersion:3
 };
 try{ Object.assign(state, JSON.parse(localStorage.getItem(LS_KEY)||'{}')); }catch(e){}
 ['fav','mastered','wrong','revealed','correct'].forEach(k => state[k] = state[k] || {});
 state.quizScore = state.quizScore || {c:0,w:0};
+state.lastQuizWrongIds = Array.isArray(state.lastQuizWrongIds) ? state.lastQuizWrongIds : [];
+bestStreak = Number(state.bestStreak) || 0;
 
 function saveState(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){}
 }
+
+function stableHash(text){
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36);
+}
+
+const usedQuestionIds = new Set();
+function makeQuestionId(sec, si, item){
+  const payload = [sec.title, sec.badge, item.q, ...(item.o || []), item.a || ''].join('|');
+  const base = 'qid-' + stableHash(payload);
+  let id = base, suffix = 2;
+  while (usedQuestionIds.has(id)) id = base + '-' + suffix++;
+  usedQuestionIds.add(id);
+  return id;
+}
+
+let activeQuizIds = [];
+let quizAnswers = {};
+let quizPausedElapsedMs = 0;
+let resumeModalShownForSession = false;
+
+function questionById(id){ return ALL_Q.find(q => q.id === id); }
+function activeQuizItems(){ return activeQuizIds.map(questionById).filter(Boolean); }
+
+function migrateLegacyStateIds(){
+  const legacyToStable = {};
+  ALL_Q.forEach(q => { legacyToStable['q' + q.num] = q.id; });
+  ['fav','mastered','wrong','revealed','correct'].forEach(key => {
+    const source = state[key] || {};
+    Object.entries(legacyToStable).forEach(([legacy, stable]) => {
+      if (Object.prototype.hasOwnProperty.call(source, legacy) && !Object.prototype.hasOwnProperty.call(source, stable)) {
+        source[stable] = source[legacy];
+      }
+      delete source[legacy];
+    });
+    state[key] = source;
+  });
+  state.lastQuizWrongIds = (state.lastQuizWrongIds || []).map(id => legacyToStable[id] || id).filter(id => questionById(id));
+  const session = state.quizSession;
+  if (session && session.version === 2) {
+    session.scopeIds = (session.visibleIds || []).map(id => legacyToStable[id] || id);
+    const mapped = {};
+    Object.entries(session.answered || {}).forEach(([id, value]) => { mapped[legacyToStable[id] || id] = value; });
+    session.answered = mapped;
+    delete session.visibleIds;
+    session.version = 3;
+    session.material = MATERIAL.slug;
+  } else if (session && session.version !== 3) {
+    state.quizSession = null;
+  }
+  state.stateVersion = 3;
+  saveState();
+}
+
+function setStopButtons(active){
+  const top = document.getElementById('stopQuizBtn');
+  const floating = document.getElementById('stopQuizFloatBtn');
+  if (top) top.style.display = active ? 'inline-flex' : 'none';
+  if (floating) floating.style.display = active ? 'inline-flex' : 'none';
+}
+
+function lockStudyControls(locked){
+  ['search','secFilter','filterBy','sortBy','clearBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = locked;
+  });
+  ['shuffle','toggle-reveal'].forEach(action => {
+    const el = document.querySelector(`[data-action="${action}"]`);
+    if (el) el.disabled = locked;
+  });
+}
+
+function ensureResumeModal(){
+  if (document.getElementById('resumeQuizModal')) return;
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'resumeQuizModal';
+  modal.innerHTML = `
+    <div class="modal-card">
+      <h3>⏸ اختبار متوقف</h3>
+      <p id="resumeQuizText">لديك اختبار متوقف.</p>
+      <div class="modal-actions">
+        <button id="resumeQuizContinue" class="btn-primary">▶ استئناف الاختبار</button>
+        <button id="resumeQuizFinish" class="qr-danger">⏹ إنهاء وحساب النتيجة</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  document.getElementById('resumeQuizContinue').addEventListener('click', () => {
+    modal.classList.remove('show');
+    resumeQuizSession(state.quizSession);
+  });
+  document.getElementById('resumeQuizFinish').addEventListener('click', () => {
+    const session = state.quizSession;
+    modal.classList.remove('show');
+    if (session && resumeQuizSession(session, true)) finishQuiz('stopped');
+  });
+}
+
+function showResumeModal(){
+  const session = state.quizSession;
+  if (!session || session.version !== 3 || session.material !== MATERIAL.slug) return false;
+  ensureResumeModal();
+  const done = Object.keys(session.answered || {}).length;
+  const total = (session.scopeIds || []).length;
+  document.getElementById('resumeQuizText').textContent =
+    `لديك اختبار متوقف بعد الإجابة عن ${done} من ${total}. اختر الاستئناف أو إنهاء الاختبار وحساب نتيجة ما أجبت عنه.`;
+  document.getElementById('resumeQuizModal').classList.add('show');
+  resumeModalShownForSession = true;
+  return true;
+}
+
 
 /* =========================================================
    بناء الأسئلة
@@ -49,7 +166,7 @@ SECTIONS.forEach((sec, si) => {
   const secId = 'sec' + (si+1);
 
   const opt = document.createElement('option');
-  opt.value = secId; opt.textContent = sec.title;
+  opt.value = secId; opt.textContent = (si + 1) + '. ' + sec.title + ' — ' + sec.badge;
   secFilter.appendChild(opt);
 
   /* ✅ الفهرس: نضيف رقم القسم والنطاق (مثل القديم) */
@@ -68,11 +185,12 @@ SECTIONS.forEach((sec, si) => {
 
   sec.qs.forEach(item => {
     qGlobal++;
-    const qid = QID(qGlobal);
+    const legacyQid = LEGACY_QID(qGlobal);
+    const qid = makeQuestionId(sec, si, item);
 
     const qDiv = document.createElement('div');
     qDiv.className = 'q';
-    qDiv.id = qid;
+    qDiv.id = legacyQid;
     qDiv.dataset.qid = qid;
     qDiv.dataset.sec = secId;
     qDiv.dataset.a = item.a;
@@ -130,13 +248,15 @@ SECTIONS.forEach((sec, si) => {
     section.appendChild(qDiv);
 
     ALL_Q.push({
-      id: qid, num: qGlobal, sec: secId, secTitle: sec.title,
+      id: qid, legacyId: legacyQid, num: qGlobal, sec: secId, secTitle: sec.title, originalSection: section,
       q: item.q, o: item.o, a: item.a, el: qDiv
     });
   });
 
   mainEl.appendChild(section);
 });
+
+migrateLegacyStateIds();
 
 /* تطبيق الحالة الأولية */
 ALL_Q.forEach(item => {
@@ -234,9 +354,10 @@ document.addEventListener('click', (e) => {
   const qid = card.dataset.qid;
   const item = ALL_Q.find(x => x.id === qid);
 
-  if (currentMode === 'quiz' && li && !card.classList.contains('answered')) {
+  if (currentMode === 'quiz' && quizStarted && li && activeQuizIds.includes(qid) && !card.classList.contains('answered')) {
     const chosen = +li.dataset.idx;
     const correct = item.a;
+    quizAnswers[qid] = chosen;
     card.classList.add('answered');
     card.querySelectorAll('ol.o li').forEach(x => {
       const i = +x.dataset.idx;
@@ -263,12 +384,13 @@ document.addEventListener('click', (e) => {
       tag.textContent = 'أخطأت ' + state.wrong[qid];
       tag.classList.remove('hidden');
     }
-    saveState(); updateStats();
+    saveState(); saveQuizSession(); updateStats();
     checkQuizCompletion();
   } else if (currentMode === 'study') {
     card.classList.toggle('revealed');
     state.revealed[qid] = card.classList.contains('revealed');
     saveState();
+    updateStats();
   }
 });
 
@@ -296,20 +418,23 @@ function beep(freq, dur){
    ========================================================= */
 function updateStats(){
   const total = ALL_Q.length;
-  const revealed = Object.keys(state.revealed).filter(k => state.revealed[k]).length;
-  const fav = Object.keys(state.fav).filter(k => state.fav[k]).length;
-  const mastered = Object.keys(state.mastered).filter(k => state.mastered[k]).length;
-
-  document.getElementById('statProgress').textContent = revealed + '/' + total;
+  const revealed = Object.keys(state.revealed).filter(k => state.revealed[k] && questionById(k)).length;
+  const fav = Object.keys(state.fav).filter(k => state.fav[k] && questionById(k)).length;
+  const mastered = Object.keys(state.mastered).filter(k => state.mastered[k] && questionById(k)).length;
+  const progress = document.getElementById('statProgress');
+  if ((currentMode === 'quiz' || currentMode === 'review') && activeQuizIds.length) {
+    progress.textContent = Object.keys(quizAnswers).length + '/' + activeQuizIds.length;
+  } else {
+    progress.textContent = revealed + '/' + total;
+  }
   document.getElementById('statFav').textContent = fav;
   document.getElementById('statMastered').textContent = mastered;
   document.getElementById('progressFill').style.width = (revealed/total*100) + '%';
   document.getElementById('sbFill').style.width = (revealed/total*100) + '%';
   document.getElementById('sbPct').textContent = Math.round(revealed/total*100) + '%';
   document.getElementById('statStreak').textContent = state.streak || 0;
-
-  const c = state.quizScore.c, w = state.quizScore.w;
-  if (c || w) document.getElementById('statScore').textContent = c + ' صح / ' + w + ' خطأ';
+  const c = state.quizScore.c || 0, w = state.quizScore.w || 0;
+  document.getElementById('statScore').textContent = (c || w) ? c + ' صح / ' + w + ' خطأ' : '—';
 }
 
 function showStreakPopup(n){
@@ -377,22 +502,22 @@ document.querySelectorAll('.topbar button').forEach(btn => {
       toggleFocusMode(btn);
     }
     else if (action === 'mode-study') {
-      setMode('study');
+      switchMode('study');
       document.querySelectorAll('.topbar button').forEach(b => {
         if (b.dataset.action.startsWith('mode-')) b.classList.remove('active');
       });
       btn.classList.add('active');
     }
     else if (action === 'mode-quiz') {
-      setMode('quiz');
+      currentMode = 'quiz';
       document.querySelectorAll('.topbar button').forEach(b => {
         if (b.dataset.action.startsWith('mode-')) b.classList.remove('active');
       });
       btn.classList.add('active');
-      startQuiz(false);
+      requestStartQuiz(false);
     }
     else if (action === 'mode-flash') {
-      setMode('flash');
+      switchMode('flash');
       document.querySelectorAll('.topbar button').forEach(b => {
         if (b.dataset.action.startsWith('mode-')) b.classList.remove('active');
       });
@@ -431,19 +556,6 @@ document.querySelectorAll('#exportMenuModal .menu-list button').forEach(btn => {
 });
 
 /* =========================================================
-   الأوضاع
-   ========================================================= */
-function setMode(mode){
-  currentMode = mode;
-  document.body.classList.toggle('flash', mode === 'flash');
-  ALL_Q.forEach(x => {
-    x.el.classList.toggle('quiz-mode', mode === 'quiz');
-    if (mode !== 'quiz') x.el.classList.remove('answered');
-  });
-  if (mode === 'flash') { flashIdx = 0; updateFlash(); }
-}
-
-/* =========================================================
    وضع التركيز
    ========================================================= */
 function toggleFocusMode(btn){
@@ -476,10 +588,6 @@ function activateFocusCard(card){
   card.classList.add('focus-active');
 }
 
-function getVisibleQuestions(){
-  return ALL_Q.filter(x => !x.el.classList.contains('hidden'));
-}
-
 function focusNext(){
   const visible = getVisibleQuestions();
   if (visible.length === 0) return;
@@ -510,119 +618,231 @@ function exitFocusMode(){
 /* =========================================================
    الاختبار
    ========================================================= */
-function startQuiz(onlyWrong){
-  const list = onlyWrong ? getWrongQuestions() : ALL_Q;
-  if (onlyWrong && list.length === 0) {
-    alert('🎉 لا توجد أسئلة أخطأت فيها!');
-    return;
-  }
-  ALL_Q.forEach(x => {
-    x.el.classList.remove('answered', 'revealed');
-    x.el.querySelectorAll('ol.o li').forEach(li => li.classList.remove('wrong'));
-    const item = ALL_Q.find(y => y.id === x.id);
-    x.el.querySelectorAll('ol.o li').forEach(li => {
-      li.classList.toggle('correct', +li.dataset.idx === item.a);
-    });
-    if (onlyWrong) {
-      const shouldShow = list.some(q => q.id === x.id);
-      x.el.classList.toggle('hidden', !shouldShow);
-    } else {
-      x.el.classList.remove('hidden');
-    }
+
+function setQuizLayout(scopeIds){
+  restoreOriginalLayout();
+  const allowed = new Set(scopeIds);
+  ALL_Q.forEach(q => {
+    q.el.classList.toggle('hidden', !allowed.has(q.id));
+    q.el.classList.toggle('quiz-mode', allowed.has(q.id));
   });
-  document.querySelectorAll('section').forEach(sec => {
+  document.querySelectorAll('main > section').forEach(sec => {
     sec.classList.toggle('hidden', !sec.querySelector('.q:not(.hidden)'));
   });
-
-  state.quizScore = {c:0,w:0};
-  state.revealed = {};
-  currentStreak = 0;
-  state.streak = 0;
-  saveState(); updateStats();
-  revealAllState = false;
-  document.getElementById('toggleRevealBtn').textContent = '👁 إظهار الكل';
-
-  document.getElementById('statTime').textContent = '00:00';
-  quizStartTime = Date.now();
-  if (quizTimerId) clearInterval(quizTimerId);
-  quizTimerId = setInterval(updateTimeElapsed, 1000);
-  document.getElementById('quizResult').classList.remove('show');
-  quizStarted = true;
-  showToast('📝 بدأ الاختبار — اختر إجابتك');
 }
 
-function getWrongQuestions(){
-  return ALL_Q.filter(q => (state.wrong[q.id]||0) > 0);
+function quizElapsedMs(){
+  return quizStarted && quizStartTime ? Math.max(0, Date.now() - quizStartTime) : quizPausedElapsedMs;
+}
+
+function saveQuizSession(){
+  if (!activeQuizIds.length || currentMode !== 'quiz') return;
+  state.quizSession = {
+    version: 3,
+    material: MATERIAL.slug,
+    elapsedMs: quizElapsedMs(),
+    score: {c: state.quizScore.c || 0, w: state.quizScore.w || 0},
+    streak: currentStreak || 0,
+    bestStreak: Math.max(bestStreak || 0, state.bestStreak || 0),
+    answered: {...quizAnswers},
+    scopeIds: [...activeQuizIds]
+  };
+  saveState();
+}
+
+function pauseQuiz(){
+  if (!quizStarted || currentMode !== 'quiz') return;
+  quizPausedElapsedMs = quizElapsedMs();
+  saveQuizSession();
+  if (quizTimerId) clearInterval(quizTimerId);
+  quizTimerId = null;
+  quizStarted = false;
+  setStopButtons(false);
+  lockStudyControls(false);
+}
+
+function switchMode(mode){
+  if (currentMode === 'quiz' && quizStarted && mode !== 'quiz') {
+    pauseQuiz();
+    showToast('⏸ تم حفظ الاختبار المتوقف — يمكنك استئنافه لاحقًا');
+  }
+  currentMode = mode;
+  document.body.classList.toggle('flash', mode === 'flash');
+  if (mode !== 'quiz') {
+    ALL_Q.forEach(q => {
+      q.el.classList.remove('quiz-mode', 'answered', 'grade-correct-mark', 'grade-wrong-mark');
+      q.el.classList.toggle('revealed', mode === 'study' && !!state.revealed[q.id]);
+    });
+    activeQuizIds = [];
+    quizAnswers = {};
+    applyFilters();
+    updateStats();
+  }
+  if (mode === 'flash') { flashIdx = 0; updateFlash(); }
+}
+
+function requestStartQuiz(onlyLastWrong=false){
+  if (!onlyLastWrong && state.quizSession && state.quizSession.version === 3) {
+    showResumeModal();
+    return;
+  }
+  startQuiz(onlyLastWrong);
+}
+
+function startQuiz(onlyLastWrong=false){
+  let list = onlyLastWrong
+    ? (state.lastQuizWrongIds || []).map(questionById).filter(Boolean)
+    : filteredItems();
+  if (!list.length) {
+    alert(onlyLastWrong ? '🎉 لا توجد أخطاء في الاختبار الأخير.' : '⚠️ لا توجد أسئلة مطابقة للفلاتر الحالية.');
+    return;
+  }
+
+  activeQuizIds = list.map(q => q.id);
+  quizAnswers = {};
+  quizPausedElapsedMs = 0;
+  state.quizScore = {c:0,w:0};
+  currentStreak = 0;
+  state.streak = 0;
+  bestStreak = Math.max(Number(state.bestStreak) || 0, Number(bestStreak) || 0);
+  currentMode = 'quiz';
+  document.body.classList.remove('flash');
+  setQuizLayout(activeQuizIds);
+  resetQuizCards();
+  document.getElementById('quizResult').classList.remove('show');
+  document.getElementById('statTime').textContent = '00:00';
+  quizStartTime = Date.now();
+  quizStarted = true;
+  if (quizTimerId) clearInterval(quizTimerId);
+  quizTimerId = setInterval(updateTimeElapsed, 1000);
+  setStopButtons(true);
+  lockStudyControls(true);
+  saveQuizSession();
+  updateStats();
+  showToast('📝 بدأ الاختبار — ' + activeQuizIds.length + ' سؤال');
 }
 
 function updateTimeElapsed(){
-  if (!quizStartTime) return;
-  const elapsed = Math.floor((Date.now() - quizStartTime)/1000);
-  const remaining = ALL_Q.filter(q => !q.el.classList.contains('answered') && !q.el.classList.contains('hidden')).length;
-  const est = remaining * 20;
-
+  const elapsed = Math.floor(quizElapsedMs()/1000);
+  const remaining = activeQuizItems().filter(q => !Object.prototype.hasOwnProperty.call(quizAnswers, q.id)).length;
+  const est = remaining * (MATERIAL.kind === 'qa' ? 15 : 20);
   const m = String(Math.floor(elapsed/60)).padStart(2,'0');
   const ss = String(elapsed%60).padStart(2,'0');
   const rm = String(Math.floor(est/60)).padStart(2,'0');
   const rs = String(est%60).padStart(2,'0');
-
   document.getElementById('statTime').textContent = m+':'+ss + ' ⏳ ' + rm+':'+rs;
 }
 
 function checkQuizCompletion(){
-  const visible = ALL_Q.filter(q => !q.el.classList.contains('hidden'));
-  const answered = visible.filter(q => q.el.classList.contains('answered')).length;
-  if (answered === visible.length && visible.length > 0) {
-    showQuizResult();
-  }
+  if (!quizStarted) return;
+  if (activeQuizIds.length && Object.keys(quizAnswers).length >= activeQuizIds.length) finishQuiz('completed');
 }
 
-function showQuizResult(){
+function resetQuizCards(){
+  activeQuizItems().forEach(q => {
+    q.el.classList.remove('answered', 'revealed');
+    q.el.querySelectorAll('ol.o li').forEach(li => li.classList.remove('wrong'));
+  });
+}
+
+function restoreQuizAnswer(q, chosen){
+  q.el.classList.add('answered');
+  q.el.querySelectorAll('ol.o li').forEach(li => {
+    const idx = Number(li.dataset.idx);
+    li.classList.remove('wrong');
+    li.classList.toggle('correct', idx === q.a);
+    if (idx === Number(chosen) && Number(chosen) !== q.a) li.classList.add('wrong');
+  });
+}
+
+function resumeQuizSession(session, silent=false){
+  if (!session || session.version !== 3 || session.material !== MATERIAL.slug) return false;
+  activeQuizIds = (session.scopeIds || []).filter(id => questionById(id));
+  if (!activeQuizIds.length) { state.quizSession = null; saveState(); return false; }
+  quizAnswers = {...(session.answered || {})};
+  state.quizScore = session.score || {c:0,w:0};
+  currentStreak = Number(session.streak) || 0;
+  state.streak = currentStreak;
+  bestStreak = Math.max(Number(session.bestStreak)||0, Number(state.bestStreak)||0);
+  state.bestStreak = bestStreak;
+  quizPausedElapsedMs = Number(session.elapsedMs) || 0;
+  currentMode = 'quiz';
+  document.body.classList.remove('flash');
+  setQuizLayout(activeQuizIds);
+  resetQuizCards();
+  Object.entries(quizAnswers).forEach(([id, chosen]) => {
+    const q = questionById(id); if (q) restoreQuizAnswer(q, chosen);
+  });
+  quizStartTime = Date.now() - quizPausedElapsedMs;
+  quizStarted = true;
   if (quizTimerId) clearInterval(quizTimerId);
-  const c = state.quizScore.c, w = state.quizScore.w;
-  const total = c + w;
-  const pct = total > 0 ? Math.round(c/total*100) : 0;
+  quizTimerId = setInterval(updateTimeElapsed, 1000);
+  setStopButtons(true);
+  lockStudyControls(true);
+  document.getElementById('quizResult').classList.remove('show');
+  updateStats(); updateTimeElapsed();
+  if (!silent) showToast('▶️ تم استئناف الاختبار من حيث توقفت');
+  return true;
+}
 
-  document.getElementById('qrScore').textContent = c + ' / ' + total + '  (' + pct + '%)';
-  document.getElementById('qrMsg').textContent = pct >= 90 ? '🎉 ممتاز!' :
-    pct >= 70 ? '👍 جيد جداً' : pct >= 50 ? '📚 استمر في المراجعة' : '💪 يحتاج مراجعة';
+function finishQuiz(reason='completed'){
+  if (quizTimerId) clearInterval(quizTimerId);
+  quizTimerId = null;
+  quizPausedElapsedMs = quizElapsedMs();
+  quizStarted = false;
+  currentMode = 'review';
+  const wrongIds = activeQuizIds.filter(id => Object.prototype.hasOwnProperty.call(quizAnswers, id) && Number(quizAnswers[id]) !== questionById(id).a);
+  state.lastQuizWrongIds = wrongIds;
+  state.quizSession = null;
+  saveState();
+  setStopButtons(false);
+  lockStudyControls(false);
+  showQuizResult(reason);
+  updateStats();
+}
 
+function showQuizResult(reason='completed'){
+  const c = state.quizScore.c || 0, w = state.quizScore.w || 0;
+  const answered = c + w, total = activeQuizIds.length;
+  const pct = answered ? Math.round(c/answered*100) : 0;
+  document.getElementById('qrScore').textContent = c + ' / ' + answered + '  (' + pct + '%)';
+  const elapsed = Math.floor(quizPausedElapsedMs/1000);
+  const tm = String(Math.floor(elapsed/60)).padStart(2,'0') + ':' + String(elapsed%60).padStart(2,'0');
+  const prefix = reason === 'stopped' ? '⏹ تم إيقاف الاختبار.' : '✅ اكتمل الاختبار.';
+  document.getElementById('qrMsg').textContent = `${prefix} أجبت عن ${answered} من ${total} — صحيح ${c}، خطأ ${w}، غير مجاب ${Math.max(0,total-answered)} — الوقت ${tm}.`;
   const review = document.getElementById('qrReview');
-  const wrongList = ALL_Q.filter(q => q.el.classList.contains('answered') && q.el.querySelector('.wrong'));
-  review.innerHTML = wrongList.length === 0
-    ? '<p style="text-align:center;color:var(--ok);font-weight:700">🎉 لا توجد أخطاء!</p>'
-    : '<h4 style="margin:0 0 8px;color:var(--err)">❌ راجع هذه الأخطاء:</h4>' +
-      wrongList.map(q => `
-        <div class="qr-review-item">
-          <b>س${q.num}:</b> ${q.q}
-          <span class="ans">✔ الإجابة الصحيحة: ${String.fromCharCode(65+q.a)}) ${q.o[q.a]}</span>
-        </div>
-      `).join('');
-
+  const wrongList = (state.lastQuizWrongIds || []).map(questionById).filter(Boolean);
+  review.innerHTML = wrongList.length === 0 ? '<p style="text-align:center;color:var(--ok);font-weight:700">🎉 لا توجد أخطاء في الأسئلة المجابة.</p>' :
+    '<h4 style="margin:0 0 8px;color:var(--err)">❌ أخطاء هذا الاختبار:</h4>' + wrongList.map(q => `<div class="qr-review-item"><b>س${q.num}:</b> ${q.q}<span class="ans">✔ الإجابة الصحيحة: ${String.fromCharCode(65+q.a)}) ${q.o[q.a]}</span></div>`).join('');
   document.getElementById('quizResult').classList.add('show');
   document.getElementById('quizResult').scrollIntoView({behavior:'smooth', block:'center'});
 }
 
-function retryWrongOnly(){
-  startQuiz(true);
-}
+function stopQuizNow(){ if (currentMode === 'quiz' && quizStarted) finishQuiz('stopped'); }
+function retryWrongOnly(){ startQuiz(true); }
 
 /* =========================================================
    البطاقات
    ========================================================= */
+
 let flashIdx = 0;
+function flashList(){ return filteredItems(); }
 function updateFlash(){
-  const item = ALL_Q[flashIdx];
-  if (!item) return;
+  const list = flashList();
+  if (!list.length) {
+    document.getElementById('fcQ').textContent = 'لا توجد أسئلة مطابقة للفلاتر الحالية';
+    document.getElementById('fcA').textContent = '—';
+    return;
+  }
+  flashIdx = ((flashIdx % list.length) + list.length) % list.length;
+  const item = list[flashIdx];
   document.getElementById('fcQ').textContent = item.num + ' ' + item.q;
   document.getElementById('fcA').textContent = item.o[item.a];
   document.getElementById('flashCard').classList.remove('flipped');
 }
-function flashNext(){ flashIdx = (flashIdx + 1) % ALL_Q.length; updateFlash(); }
-function flashPrev(){ flashIdx = (flashIdx - 1 + ALL_Q.length) % ALL_Q.length; updateFlash(); }
-document.getElementById('flashCard').addEventListener('click', function(){
-  this.classList.toggle('flipped');
-});
+function flashNext(){ const list = flashList(); if (!list.length) return; flashIdx = (flashIdx + 1) % list.length; updateFlash(); }
+function flashPrev(){ const list = flashList(); if (!list.length) return; flashIdx = (flashIdx - 1 + list.length) % list.length; updateFlash(); }
+document.getElementById('flashCard').addEventListener('click', function(){ this.classList.toggle('flipped'); });
 
 /* =========================================================
    خلط
@@ -651,43 +871,106 @@ function shuffleAll(){
 /* =========================================================
    البحث + الفلترة
    ========================================================= */
-const searchInput = document.getElementById('search');
-const sortBy = document.getElementById('sortBy');
 
-function applyFilters(){
+const searchInput = document.getElementById('search');
+const filterBy = document.getElementById('filterBy');
+const sortBy = document.getElementById('sortBy');
+let sortedSection = null;
+
+function restoreOriginalLayout(){
+  if (sortedSection && sortedSection.parentNode) sortedSection.remove();
+  sortedSection = null;
+  SECTIONS.forEach((sec, si) => {
+    const secEl = document.getElementById('sec' + (si + 1));
+    if (secEl && secEl.parentNode !== mainEl) mainEl.appendChild(secEl);
+  });
+  ALL_Q.slice().sort((a,b) => a.num - b.num).forEach(q => q.originalSection.appendChild(q.el));
+}
+
+function filteredItems(){
   const term = searchInput.value.trim().toLowerCase();
   const secId = secFilter.value;
+  const mode = filterBy.value;
   const sort = sortBy.value;
-  let visible = 0;
-
-  ALL_Q.forEach(item => {
-    const qEl = item.el;
-    const text = qEl.textContent.toLowerCase();
-    const matchTerm = !term || text.includes(term);
-    const matchSec = !secId || qEl.dataset.sec === secId;
-    let matchSort = true;
-    if (sort === 'wrong') matchSort = (state.wrong[item.id]||0) > 0;
-    if (sort === 'unmastered') matchSort = !state.mastered[item.id];
-    if (sort === 'fav') matchSort = !!state.fav[item.id];
-
-    const show = matchTerm && matchSec && matchSort;
-    qEl.classList.toggle('hidden', !show);
-    if (show) visible++;
+  let list = ALL_Q.filter(item => {
+    const text = item.el.textContent.toLowerCase();
+    if (term && !text.includes(term)) return false;
+    if (secId && item.sec !== secId) return false;
+    if (mode === 'wrong' && !(state.wrong[item.id] > 0)) return false;
+    if (mode === 'unmastered' && !!state.mastered[item.id]) return false;
+    if (mode === 'fav' && !state.fav[item.id]) return false;
+    return true;
   });
 
-  document.querySelectorAll('section').forEach(sec => {
-    sec.classList.toggle('hidden', !sec.querySelector('.q:not(.hidden)'));
-  });
+  if (sort === 'wrong-desc' || sort === 'wrong-asc') {
+    list = list.filter(item => (state.wrong[item.id] || 0) > 0);
+    const direction = sort === 'wrong-desc' ? -1 : 1;
+    list.sort((a,b) => {
+      const diff = (state.wrong[a.id] || 0) - (state.wrong[b.id] || 0);
+      return diff ? diff * direction : a.num - b.num;
+    });
+  } else {
+    list.sort((a,b) => a.num - b.num);
+  }
+  return list;
+}
 
-  document.getElementById('emptyMsg').style.display = visible ? 'none' : 'block';
+function applyFilters(){
+  if (quizStarted) return;
+  if (currentMode === 'review') {
+    currentMode = 'study';
+    ALL_Q.forEach(q => {
+      q.el.classList.remove('quiz-mode', 'answered', 'grade-correct-mark', 'grade-wrong-mark');
+      q.el.classList.toggle('revealed', !!state.revealed[q.id]);
+    });
+    activeQuizIds = [];
+    quizAnswers = {};
+  }
+  restoreOriginalLayout();
+  const list = filteredItems();
+  const allowed = new Set(list.map(q => q.id));
+  const sort = sortBy.value;
+
+  if (sort === 'wrong-desc' || sort === 'wrong-asc') {
+    document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
+    sortedSection = document.createElement('section');
+    sortedSection.id = 'sorted-results';
+    const title = document.createElement('div');
+    title.className = 'sec-title';
+    title.innerHTML = `<span class="badge">${list.length}</span> نتائج الأخطاء`;
+    sortedSection.appendChild(title);
+    list.forEach(q => {
+      q.el.classList.remove('hidden');
+      sortedSection.appendChild(q.el);
+    });
+    if (list.length) mainEl.appendChild(sortedSection);
+  } else {
+    ALL_Q.forEach(q => q.el.classList.toggle('hidden', !allowed.has(q.id)));
+    document.querySelectorAll('main > section').forEach(sec => {
+      sec.classList.toggle('hidden', !sec.querySelector('.q:not(.hidden)'));
+    });
+  }
+
+  document.getElementById('emptyMsg').style.display = list.length ? 'none' : 'block';
+  if (currentMode === 'flash') { flashIdx = 0; updateFlash(); }
+  return list;
+}
+
+function getVisibleQuestions(){
+  return filteredItems();
 }
 
 searchInput.addEventListener('input', applyFilters);
 secFilter.addEventListener('change', applyFilters);
+filterBy.addEventListener('change', applyFilters);
 sortBy.addEventListener('change', applyFilters);
 document.getElementById('clearBtn').addEventListener('click', () => {
-  searchInput.value = ''; secFilter.value = ''; sortBy.value = 'default';
-  applyFilters(); searchInput.focus();
+  searchInput.value = '';
+  secFilter.value = '';
+  filterBy.value = 'all';
+  sortBy.value = 'default';
+  applyFilters();
+  searchInput.focus();
 });
 
 /* =========================================================
@@ -725,6 +1008,8 @@ document.getElementById('resetConfirm').addEventListener('click', () => {
     state.quizScore = {c:0,w:0};
     state.streak = 0;
     state.bestStreak = 0;
+    state.quizSession = null;
+    state.lastQuizWrongIds = [];
   }
 
   saveState();
@@ -786,44 +1071,30 @@ function openStatsModal(){
 /* =========================================================
    CSV
    ========================================================= */
+
 function exportCSV(onlyFav){
   const list = onlyFav ? ALL_Q.filter(q => state.fav[q.id]) : ALL_Q;
-  if (onlyFav && list.length === 0) {
-    alert('⚠️ لا توجد أسئلة في المفضلة');
-    return;
-  }
-  const rows = [['#','القسم','السؤال','A','B','C','D','الإجابة الصحيحة']];
-  list.forEach(item => {
-    const correct = String.fromCharCode(65 + item.a);
-    rows.push([item.num, item.secTitle, item.q, item.o[0], item.o[1], item.o[2], item.o[3], correct]);
-  });
-  const csv = '\uFEFF' + rows.map(r => r.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('\n');
+  if (onlyFav && !list.length) { alert('⚠️ لا توجد أسئلة في المفضلة'); return; }
+  const maxOptions = Math.max(0, ...list.map(q => q.o.length));
+  const headers = Array.from({length:maxOptions}, (_,i) => String.fromCharCode(65+i));
+  const rows = [['#','القسم','السؤال',...headers,'الإجابة الصحيحة']];
+  list.forEach(item => rows.push([item.num,item.secTitle,item.q,...Array.from({length:maxOptions},(_,i)=>item.o[i]||''),String.fromCharCode(65+item.a)]));
+  const csv = '\uFEFF' + rows.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g,'""') + '"').join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = onlyFav ? (MATERIAL.slug + '-favorites.csv') : (MATERIAL.slug + '-questions.csv');
-  a.click();
-  URL.revokeObjectURL(url);
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href=url; a.download=onlyFav ? MATERIAL.slug+'-favorites.csv' : MATERIAL.slug+'-questions.csv'; a.click(); URL.revokeObjectURL(url);
   showToast('📥 تم تنزيل CSV');
 }
 
 /* =========================================================
    نسخة احتياطية
    ========================================================= */
+
 function downloadBackup(){
-  const data = {
-    version: 5,
-    exported: new Date().toISOString(),
-    state: state
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = MATERIAL.slug + '-backup-' + new Date().toISOString().split('T')[0] + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
+  const data = {version:6, material:MATERIAL.slug, exported:new Date().toISOString(), state};
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href=url; a.download=MATERIAL.slug+'-backup-'+new Date().toISOString().split('T')[0]+'.json'; a.click(); URL.revokeObjectURL(url);
   showToast('💾 تم تنزيل النسخة الاحتياطية');
 }
 
@@ -831,17 +1102,16 @@ document.getElementById('restoreConfirm').addEventListener('click', () => {
   const file = document.getElementById('restoreFile').files[0];
   if (!file) { alert('⚠️ اختر ملف JSON أولاً'); return; }
   const reader = new FileReader();
-  reader.onload = (ev) => {
+  reader.onload = ev => {
     try {
       const data = JSON.parse(ev.target.result);
       if (!data.state) throw new Error('ملف غير صالح');
+      const sourceMaterial = data.material || data.type || null;
+      if (sourceMaterial && sourceMaterial !== MATERIAL.slug) throw new Error('هذه النسخة الاحتياطية تخص مادة أخرى');
       if (!confirm('⚠️ سيتم استبدال كل تقدمك الحالي. متابعة؟')) return;
       localStorage.setItem(LS_KEY, JSON.stringify(data.state));
-      alert('✅ تمت الاستعادة بنجاح');
-      location.reload();
-    } catch (err) {
-      alert('❌ فشل قراءة الملف: ' + err.message);
-    }
+      alert('✅ تمت الاستعادة بنجاح'); location.reload();
+    } catch (err) { alert('❌ فشل قراءة الملف: ' + err.message); }
   };
   reader.readAsText(file);
 });
@@ -865,6 +1135,11 @@ if (location.hash) {
    ========================================================= */
 const toTopBtn = document.getElementById('toTop');
 const toBottomBtn = document.getElementById('toBottom');
+const topStopQuizBtn = document.getElementById('stopQuizBtn');
+const floatStopQuizBtn = document.getElementById('stopQuizFloatBtn');
+if (topStopQuizBtn) topStopQuizBtn.addEventListener('click', stopQuizNow);
+if (floatStopQuizBtn) floatStopQuizBtn.addEventListener('click', stopQuizNow);
+
 
 window.addEventListener('scroll', () => {
   const y = window.scrollY;
@@ -926,7 +1201,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); exitFocusMode(); }
     return;
   }
-  if (currentMode === 'quiz' && ['1','2','3','4'].includes(e.key)) {
+  if (currentMode === 'quiz' && quizStarted && ['1','2','3','4'].includes(e.key)) {
     const visible = ALL_Q.filter(x => !x.el.classList.contains('hidden') && !x.el.classList.contains('answered'));
     if (visible.length > 0) {
       const firstCard = visible[0].el;
@@ -957,14 +1232,7 @@ document.addEventListener('keydown', (e) => {
 /* =========================================================
    حفظ جلسة الاختبار
    ========================================================= */
-window.addEventListener('beforeunload', () => {
-  if (quizStarted && quizStartTime) {
-    state.quizSession = {
-      startedAt: quizStartTime,
-      score: state.quizScore,
-      streak: currentStreak
-    };
-    saveState();
-  }
-});
+window.addEventListener('beforeunload', () => { if (quizStarted) saveQuizSession(); });
+ensureResumeModal();
+setTimeout(() => { if (state.quizSession && !quizStarted) showResumeModal(); }, 250);
 

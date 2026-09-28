@@ -30,7 +30,6 @@ University-/
 │   ├── styles.css
 │   ├── mcq-engine.js
 │   ├── qa-engine.js
-│   ├── runtime-fixes.js
 │   └── pwa-icon.svg
 ├── data/
 │   ├── security-mcq.js
@@ -103,7 +102,7 @@ data/security-qa.js
 data/enterprise-architecture.js
 ```
 
-The shared interface and behavior are handled by files in the `assets/` directory.
+The shared interface and behavior are handled directly by `assets/mcq-engine.js` and `assets/qa-engine.js`.
 
 ## Validation
 
