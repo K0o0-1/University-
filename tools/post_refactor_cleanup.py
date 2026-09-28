@@ -25,21 +25,27 @@ for name in ['mcq-engine.js','qa-engine.js']:
     elif new_apply not in text:
         raise SystemExit(f'{name}: applyFilters block not found')
 
-    # Revealing/hiding one card in study mode must update progress immediately.
-    old_study = """    state.revealed[qid] = card.classList.contains('revealed');\n    saveState();\n"""
-    new_study = """    state.revealed[qid] = card.classList.contains('revealed');\n    saveState();\n    updateStats();\n"""
-    if old_study in text:
-        text = text.replace(old_study, new_study, 1)
-    elif new_study not in text:
-        raise SystemExit(f'{name}: study reveal block not found')
+    study_patterns = [
+        ("""    state.revealed[qid] = card.classList.contains('revealed');\n    saveState();\n""",
+         """    state.revealed[qid] = card.classList.contains('revealed');\n    saveState();\n    updateStats();\n"""),
+        ("""    state.revealed[card.dataset.qid] = card.classList.contains('revealed');\n    saveState();\n""",
+         """    state.revealed[card.dataset.qid] = card.classList.contains('revealed');\n    saveState();\n    updateStats();\n""")
+    ]
+    if not any(newp in text for _, newp in study_patterns):
+        for oldp, newp in study_patterns:
+            if oldp in text:
+                text = text.replace(oldp, newp, 1)
+                break
+        else:
+            raise SystemExit(f'{name}: study reveal block not found')
 
     path.write_text(text, encoding='utf-8')
 
 qa = ROOT / 'assets' / 'qa-engine.js'
 text = qa.read_text(encoding='utf-8')
 old = """  if (showBtn) {\n    const card = showBtn.closest('.q');\n    card.classList.add('revealed');\n    state.revealed[card.dataset.qid] = true;\n    saveState();\n    e.stopPropagation();\n    return;\n  }\n"""
-new = """  if (showBtn) {\n    const card = showBtn.closest('.q');\n    card.classList.add('revealed');\n    if (currentMode === 'study') {\n      state.revealed[card.dataset.qid] = true;\n      saveState();\n      updateStats();\n    }\n    e.stopPropagation();\n    return;\n  }\n"""
 old_v2 = """  if (showBtn) {\n    const card = showBtn.closest('.q');\n    card.classList.add('revealed');\n    if (currentMode === 'study') {\n      state.revealed[card.dataset.qid] = true;\n      saveState();\n    }\n    e.stopPropagation();\n    return;\n  }\n"""
+new = """  if (showBtn) {\n    const card = showBtn.closest('.q');\n    card.classList.add('revealed');\n    if (currentMode === 'study') {\n      state.revealed[card.dataset.qid] = true;\n      saveState();\n      updateStats();\n    }\n    e.stopPropagation();\n    return;\n  }\n"""
 if old in text:
     text = text.replace(old, new, 1)
 elif old_v2 in text:
