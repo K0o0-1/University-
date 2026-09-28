@@ -1,3 +1,4 @@
+// Browser-level regression tests for filtering, quiz scope, pause/resume, and progress.
 const { test, expect } = require('@playwright/test');
 
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:4173';
