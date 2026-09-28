@@ -82,6 +82,17 @@ for data_file in sorted((ROOT / 'data').glob('*.js')):
 if (ROOT / 'data' / 'enterprise-architecture-base173.js').exists():
     fail('enterprise-architecture-base173.js should not exist after EA merge')
 
+if (ROOT / 'assets' / 'runtime-fixes.js').exists():
+    fail('assets/runtime-fixes.js should not exist after engine refactor')
+
+for html_path in (ROOT / 'materials').glob('*.html'):
+    page = html_path.read_text(encoding='utf-8')
+    for required in ('id="filterBy"', 'id="sortBy"', 'id="stopQuizFloatBtn"'):
+        if required not in page:
+            fail(f'{html_path.relative_to(ROOT)}: missing required UI control {required}')
+    if 'runtime-fixes.js' in page:
+        fail(f'{html_path.relative_to(ROOT)}: still references runtime-fixes.js')
+
 html_files = list((ROOT / 'materials').glob('*.html')) + [ROOT / 'index.html']
 for html_path in html_files:
     text = html_path.read_text(encoding='utf-8')

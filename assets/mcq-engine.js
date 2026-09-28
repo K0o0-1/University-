@@ -587,10 +587,6 @@ function activateFocusCard(card){
   card.classList.add('focus-active');
 }
 
-function getVisibleQuestions(){
-  return ALL_Q.filter(x => !x.el.classList.contains('hidden'));
-}
-
 function focusNext(){
   const visible = getVisibleQuestions();
   if (visible.length === 0) return;
@@ -672,7 +668,12 @@ function switchMode(mode){
   currentMode = mode;
   document.body.classList.toggle('flash', mode === 'flash');
   if (mode !== 'quiz') {
-    ALL_Q.forEach(q => q.el.classList.remove('quiz-mode', 'answered', 'grade-correct-mark', 'grade-wrong-mark'));
+    ALL_Q.forEach(q => {
+      q.el.classList.remove('quiz-mode', 'answered', 'grade-correct-mark', 'grade-wrong-mark');
+      q.el.classList.toggle('revealed', mode === 'study' && !!state.revealed[q.id]);
+    });
+    activeQuizIds = [];
+    quizAnswers = {};
     applyFilters();
   }
   if (mode === 'flash') { flashIdx = 0; updateFlash(); }
@@ -914,6 +915,15 @@ function filteredItems(){
 
 function applyFilters(){
   if (quizStarted) return;
+  if (currentMode === 'review') {
+    currentMode = 'study';
+    ALL_Q.forEach(q => {
+      q.el.classList.remove('quiz-mode', 'answered', 'grade-correct-mark', 'grade-wrong-mark');
+      q.el.classList.toggle('revealed', !!state.revealed[q.id]);
+    });
+    activeQuizIds = [];
+    quizAnswers = {};
+  }
   restoreOriginalLayout();
   const list = filteredItems();
   const allowed = new Set(list.map(q => q.id));
