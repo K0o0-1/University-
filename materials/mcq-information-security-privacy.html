@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#3b82f6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>أمن نظم المعلومات والخصوصية</title>
-<link rel="manifest" id="manifestLink">
+<link rel="manifest" id="manifestLink" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233b82f6'/><text x='50' y='65' font-size='55' text-anchor='middle' fill='white' font-family='Arial'>📘</text></svg>">
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
@@ -17,6 +17,7 @@
   <div class="topbar">
     <button data-action="mode-study" class="active">📖 دراسة</button>
     <button data-action="mode-quiz">📝 اختبار</button>
+    <button data-action="stop-quiz" id="stopQuizBtn" style="display:none">⏹ إيقاف الاختبار</button>
     <button data-action="mode-flash">🎴 بطاقات</button>
     <button data-action="focus">🎯 تركيز</button>
     <button data-action="toggle-reveal" id="toggleRevealBtn">👁 إظهار الكل</button>
@@ -48,5 +49,5 @@
 <div class="streak-popup" id="streakPopup">🔥</div><div class="toast" id="toast"></div>
 <footer class="signature" aria-label="Author credit"><a class="signature-card" href="https://wa.me/967771179020" target="_blank" rel="noopener noreferrer" title="Contact Eng. Khalid Al-sofi on WhatsApp"><span class="signature-kicker">DESIGNED &amp; ENGINEERED BY</span><strong>Eng. Khalid Al-sofi</strong><span class="signature-contact">WHATSAPP • +967 771 179 020</span></a></footer>
 <div class="scroll-btns"><button id="toTop" title="للأعلى">▲</button><button id="toBottom" title="للأسفل">▼</button></div>
-<script src="../data/security-mcq.js"></script><script src="../assets/mcq-engine.js"></script>
+<script src="../data/security-mcq.js"></script><script src="../assets/mcq-engine.js"></script><script src="../assets/runtime-fixes.js"></script>
 </body></html>

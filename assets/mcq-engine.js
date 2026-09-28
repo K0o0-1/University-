@@ -55,7 +55,7 @@ SECTIONS.forEach((sec, si) => {
   /* ✅ الفهرس: نضيف رقم القسم والنطاق (مثل القديم) */
   const a = document.createElement('a');
   a.href = '#' + secId;
-  a.textContent = (si + 1) + '. ' + sec.title + ' (' + sec.badge + ')';
+  a.textContent = (si + 1) + '. ' + sec.title + ' — ' + sec.badge;
   indexEl.appendChild(a);
 
   const section = document.createElement('section');
@@ -941,61 +941,16 @@ document.addEventListener('keydown', (e) => {
    PWA
    ========================================================= */
 (function initPWA(){
-  const manifest = {
-    name: MATERIAL.title || 'Study Material',
-    short_name: MATERIAL.shortName || MATERIAL.title || 'Study',
-    description: MATERIAL.description || MATERIAL.subtitle || '',
-    start_url: '.',
-    display: 'standalone',
-    background_color: '#3b82f6',
-    theme_color: '#3b82f6',
-    orientation: 'portrait',
-    lang: 'ar',
-    dir: 'rtl',
-    icons: [
-      {
-        src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233b82f6'/><text x='50' y='65' font-size='55' text-anchor='middle' fill='white' font-family='Arial'>🔒</text></svg>",
-        sizes: '192x192',
-        type: 'image/svg+xml',
-        purpose: 'any maskable'
-      },
-      {
-        src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%233b82f6'/><text x='50' y='65' font-size='55' text-anchor='middle' fill='white' font-family='Arial'>🔒</text></svg>",
-        sizes: '512x512',
-        type: 'image/svg+xml',
-        purpose: 'any maskable'
-      }
-    ]
-  };
-  const manifestBlob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
-  document.getElementById('manifestLink').href = URL.createObjectURL(manifestBlob);
-
+  const manifestLink = document.getElementById('manifestLink');
+  if (manifestLink) manifestLink.href = '../manifest.webmanifest';
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    const swCode = `
-      const CACHE = (MATERIAL.slug || 'study') + '-eai-v1';
-      self.addEventListener('install', e => { self.skipWaiting(); });
-      self.addEventListener('activate', e => { e.waitUntil(clients.claim()); });
-      self.addEventListener('fetch', e => {
-        e.respondWith(
-          fetch(e.request).then(resp => {
-            const copy = resp.clone();
-            caches.open(CACHE).then(c => c.put(e.request, copy)).catch(()=>{});
-            return resp;
-          }).catch(() => caches.match(e.request))
-        );
-      });
-    `;
-    const swBlob = new Blob([swCode], {type:'application/javascript'});
-    const swUrl = URL.createObjectURL(swBlob);
-    navigator.serviceWorker.register(swUrl).catch(err => {
-      console.warn('SW registration failed:', err);
-    });
+    navigator.serviceWorker.register('../sw.js', {scope:'../'}).catch(err => console.warn('SW registration failed:', err));
   }
-
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredInstallPrompt = e;
-    document.getElementById('installBtn').style.display = 'inline-flex';
+    const installBtn = document.getElementById('installBtn');
+    if (installBtn) installBtn.style.display = 'inline-flex';
   });
 })();
 
@@ -1013,18 +968,3 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
-if (state.quizSession && state.quizSession.score &&
-    (state.quizSession.score.c + state.quizSession.score.w) > 0) {
-  setTimeout(() => {
-    if (confirm('⏸ لديك جلسة اختبار سابقة. هل تريد استئنافها؟')) {
-      state.quizScore = state.quizSession.score;
-      currentStreak = state.quizSession.streak || 0;
-      quizStartTime = state.quizSession.startedAt;
-      quizStarted = true;
-      document.querySelector('[data-action="mode-quiz"]').click();
-    } else {
-      state.quizSession = null;
-      saveState();
-    }
-  }, 1500);
-}

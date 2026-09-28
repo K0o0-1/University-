@@ -24,10 +24,14 @@ The project does not require a backend, database, or installation. It runs direc
 ```text
 University-/
 ├── index.html
+├── manifest.webmanifest
+├── sw.js
 ├── assets/
 │   ├── styles.css
 │   ├── mcq-engine.js
-│   └── qa-engine.js
+│   ├── qa-engine.js
+│   ├── runtime-fixes.js
+│   └── pwa-icon.svg
 ├── data/
 │   ├── security-mcq.js
 │   ├── security-qa.js
@@ -38,6 +42,10 @@ University-/
 │   ├── qa-information-security-privacy.html
 │   ├── mcq-flutter.html
 │   └── enterprise-architecture.html
+├── tools/
+│   └── validate.py
+├── .github/workflows/
+│   └── validate.yml
 ├── .nojekyll
 └── README.md
 ```
@@ -96,6 +104,16 @@ data/enterprise-architecture.js
 ```
 
 The shared interface and behavior are handled by files in the `assets/` directory.
+
+## Validation
+
+The repository includes an automatic validator that checks question counts, answer indexes, referenced files, and initial page counters. Run it locally with:
+
+```bash
+python3 tools/validate.py
+```
+
+GitHub Actions also runs the same validation on pushes and pull requests.
 
 ## Repository
 
