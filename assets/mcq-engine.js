@@ -434,7 +434,7 @@ function updateStats(){
   document.getElementById('sbPct').textContent = Math.round(revealed/total*100) + '%';
   document.getElementById('statStreak').textContent = state.streak || 0;
   const c = state.quizScore.c || 0, w = state.quizScore.w || 0;
-  document.getElementById('statScore').textContent = (c || w) ? c + ' أعرفها / ' + w + ' لا أعرفها' : '—';
+  document.getElementById('statScore').textContent = (c || w) ? c + ' صح / ' + w + ' خطأ' : '—';
 }
 
 function showStreakPopup(n){
