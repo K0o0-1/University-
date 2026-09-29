@@ -5,6 +5,7 @@ const CORE = [
   './assets/styles.css',
   './assets/mcq-engine.js',
   './assets/qa-engine.js',
+  './assets/study-v2.js',
   './manifest.webmanifest',
   './assets/pwa-icon.svg'
 ];

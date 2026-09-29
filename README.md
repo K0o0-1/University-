@@ -125,3 +125,20 @@ Khalid Al-Sofi
 ---
 
 Built as a personal university study workspace for organizing and reviewing course materials in one place.
+
+
+## Development Quality Rule
+
+**Full-project verification rule:** after every important change, test the changed feature first, then run the complete project validation and browser behavior suite before the change is accepted.
+
+## Quiz & Analytics V2
+
+- Study mode remains the default learning mode.
+- Practice mode provides immediate feedback.
+- Exam mode hides correctness until the end.
+- Custom quizzes support section, question count, current filters, weakness-only scope, and random order.
+- Results include answered/unanswered counts, score, time, and average time per question.
+- The last 20 quiz sessions are stored locally per browser.
+- Per-section statistics, smart mastery levels, and weakness ranking are available.
+- Quiz navigation supports answered state and review flags.
+- A dedicated statistics view summarizes progress, weaknesses, section performance, and quiz history.
