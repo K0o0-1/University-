@@ -82,7 +82,15 @@
   function recordAttempt(id, correct){
     const q = qById(id);
     if (!q) return;
-    const old = recFor(q);
+    const cumulativeCorrect = Number(state.correct?.[id]) || 0;
+    const cumulativeWrong = Number(state.wrong?.[id]) || 0;
+    const existing = state.questionStats[id];
+    const old = existing || {
+      attempts:Math.max(0, cumulativeCorrect + cumulativeWrong - 1),
+      correct:Math.max(0, cumulativeCorrect - (correct ? 1 : 0)),
+      wrong:Math.max(0, cumulativeWrong - (correct ? 0 : 1)),
+      recent:[], lastAt:null, lastResult:null
+    };
     const recent = Array.isArray(old.recent) ? old.recent.slice(-4) : [];
     recent.push(!!correct);
     state.questionStats[id] = {
@@ -125,6 +133,9 @@
 
   function onAnswer(payload){
     recordAttempt(payload.id, !!payload.correct);
+    if (payload.mode === 'exam' && kind === 'mcq' && !payload.correct) {
+      qById(payload.id)?.el.querySelector('.tag.err')?.classList.add('hidden');
+    }
     refreshNavigator();
   }
 
@@ -135,6 +146,15 @@
       persist();
     }
     renderQuizResult(result);
+    if (result.mode === 'exam' && kind === 'mcq') {
+      (result.wrongIds || []).forEach(id => {
+        const tag = qById(id)?.el.querySelector('.tag.err');
+        if (tag) {
+          tag.textContent = 'أخطأت ' + (Number(state.wrong?.[id]) || 0);
+          tag.classList.remove('hidden');
+        }
+      });
+    }
     refreshNavigator(true);
   }
 
@@ -170,7 +190,7 @@
               <option value="100">100</option><option value="all" selected>الكل</option>
             </select>
           </label>
-          <label>الترتيب
+          <label>اختيار الأسئلة
             <select id="quizSetupOrder">
               <option value="original">ترتيب الأسئلة</option>
               <option value="random">🔀 عشوائي</option>

@@ -85,7 +85,8 @@ test.describe('Quiz & Analytics V2', () => {
       const key = 'enterprise275_state_ea2_v5';
       return JSON.parse(localStorage.getItem(key) || '{}').questionStats?.[id];
     }, qid);
-    expect(rec.wrong).toBeGreaterThanOrEqual(1);
+    expect(rec.attempts).toBe(1);
+    expect(rec.wrong).toBe(1);
   });
 
   test('Exam hides correctness until finish and result metrics appear', async ({ page }) => {
@@ -94,6 +95,7 @@ test.describe('Quiz & Analytics V2', () => {
     const card = await chooseWrong(page);
     await expect(page.locator('#statScore')).toHaveText('مخفي');
     await expect(card.locator('ol.o li.exam-choice')).toHaveCount(1);
+    await expect(card.locator('.tag.err')).toHaveClass(/hidden/);
     const bg = await card.locator('ol.o li.wrong').evaluate(el => getComputedStyle(el).backgroundColor);
     expect(bg).toBeTruthy();
     await page.locator('#stopQuizFloatBtn').click();
