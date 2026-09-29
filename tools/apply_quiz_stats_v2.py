@@ -167,11 +167,6 @@ def patch_engine(path, kind):
             f"{path}: qa answer callback"
         )
 
-    old_finish = """  const wrongIds = activeQuizIds.filter(id => Object.prototype.hasOwnProperty.call(quizAnswers, id) && """
-    idx = text.find(old_finish)
-    if idx == -1:
-        raise SystemExit(f'Missing finish block start: {path}')
-
     finish_pattern = re.compile(r"function finishQuiz\(reason='completed'\)\{.*?\n\}\n\nfunction showQuizResult", re.S)
     m = finish_pattern.search(text)
     if not m:
