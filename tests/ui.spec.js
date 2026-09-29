@@ -21,13 +21,15 @@ async function openSetup(page, mode='practice') {
   await expect(page.locator('#quizSetupModal')).toHaveClass(/show/);
 }
 
-async function startSetup(page, {mode='practice', section='', count='all', source='all', order='original'} = {}) {
+async function startSetup(page, {mode='practice', section='', count='all', source='all', order='original', timeMode='none', timeValue=null} = {}) {
   await openSetup(page, mode);
   await page.selectOption('#quizSetupMode', mode);
   await page.selectOption('#quizSetupSection', section);
   await page.selectOption('#quizSetupCount', count);
   await page.selectOption('#quizSetupSource', source);
   await page.selectOption('#quizSetupOrder', order);
+  await page.selectOption('#quizSetupTimeMode', timeMode);
+  if (timeMode !== 'none' && timeValue !== null) await page.locator('#quizSetupTimeValue').fill(String(timeValue));
   await page.locator('#quizSetupStart').click();
 }
 
@@ -183,5 +185,123 @@ test.describe('Quiz & Analytics V2', () => {
     await page.locator('[data-action="mode-study"]').click();
     await expect(page.locator('#statProgress')).toHaveText('1/275');
     await expect(page.locator('#q1')).toHaveClass(/revealed/);
+  });
+});
+
+
+test.describe('Quiz Plus 8', () => {
+  test('total timer auto-finishes and stores timeout result', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'exam', section:'sec1', count:'10', timeMode:'total', timeValue:'0.02'});
+    await expect(page.locator('#quizCountdown')).toBeVisible();
+    await expect(page.locator('#quizResult')).toHaveClass(/show/, {timeout:5000});
+    await expect(page.locator('#qrMsg')).toContainText('انتهى الوقت');
+    const reason = await page.evaluate(() => JSON.parse(localStorage.getItem('enterprise275_state_ea2_v5')||'{}').quizHistory?.[0]?.reason);
+    expect(reason).toBe('timeout');
+  });
+
+  test('per-question timer expires only the current question and advances', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'practice', section:'sec1', count:'10', timeMode:'per-question', timeValue:'1'});
+    const first = await page.locator('.q.quiz-current').getAttribute('data-qid');
+    await expect(page.locator('#quizCountdown')).toContainText('1ث/سؤال');
+    await expect(page.locator('.q.time-expired')).toHaveCount(1, {timeout:4000});
+    const second = await page.locator('.q.quiz-current').getAttribute('data-qid');
+    expect(second).not.toBe(first);
+    await expect(page.locator('#statProgress')).toHaveText('0/10');
+    const timer = await page.evaluate(() => window.StudyPlus.getTimerState());
+    expect(timer.mode).toBe('per-question');
+    expect(timer.expired).toContain(first);
+    await page.locator('#stopQuizFloatBtn').click();
+  });
+
+  test('per-question timer preserves remaining time when a question is skipped', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'practice', section:'sec1', count:'10', timeMode:'per-question', timeValue:'5'});
+    const first = await page.locator('.q.quiz-current').getAttribute('data-qid');
+    await page.waitForTimeout(1200);
+    await page.locator('#quizSkipBtn').click();
+    const timer = await page.evaluate(() => window.StudyPlus.getTimerState());
+    expect(timer.perQuestionRemaining[first]).toBeLessThan(5);
+    expect(timer.perQuestionRemaining[first]).toBeGreaterThan(2.5);
+    await expect(page.locator('#statProgress')).toHaveText('0/10');
+    await page.locator('#stopQuizFloatBtn').click();
+  });
+
+  test('timer warns unobtrusively when one minute remains', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'practice', section:'sec1', count:'10', timeMode:'total', timeValue:'1.02'});
+    await expect(page.locator('#toast')).toContainText('باقي دقيقة', {timeout:5000});
+    await page.locator('#stopQuizFloatBtn').click();
+  });
+
+  test('skip moves to another unanswered question without changing progress', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'practice', section:'sec1', count:'10'});
+    const first = await page.locator('.q.quiz-current').getAttribute('data-qid');
+    await page.locator('#quizSkipBtn').click();
+    const second = await page.locator('.q.quiz-current').getAttribute('data-qid');
+    expect(second).not.toBe(first);
+    await expect(page.locator('#statProgress')).toHaveText('0/10');
+    await page.locator('#stopQuizFloatBtn').click();
+  });
+
+  test('question statistics show attempts, accuracy, last result and weakness priority', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'practice', section:'sec1', count:'10'});
+    const card = await chooseWrong(page);
+    await card.locator('.btn-qstats').click();
+    await expect(page.locator('#questionStatsModal')).toHaveClass(/show/);
+    await expect(page.locator('#questionStatsContent')).toContainText('المحاولات');
+    await expect(page.locator('#questionStatsContent')).toContainText('أولوية المراجعة');
+    await expect(page.locator('#questionStatsContent')).toContainText('آخر محاولة');
+    await page.locator('#questionStatsClose').click();
+    await page.locator('#stopQuizFloatBtn').click();
+  });
+
+  test('statistics page renders a compact progress chart and history detail view', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'practice', section:'sec1', count:'10'});
+    await chooseWrong(page);
+    await page.locator('#stopQuizFloatBtn').click();
+    await page.locator('[data-action="stats"]').click();
+    await expect(page.locator('.trend-chart')).toHaveCount(1);
+    await expect(page.locator('.trend-bar')).toHaveCount(1);
+    await page.locator('[data-history-detail]').first().click();
+    await expect(page.locator('#historyDetailModal')).toHaveClass(/show/);
+    await expect(page.locator('#historyDetailContent')).toContainText('النتيجة');
+    await expect(page.locator('.history-question')).toHaveCount(10);
+  });
+
+  test('history can repeat the exact same quiz scope', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'exam', section:'sec1', count:'10', order:'random'});
+    const original = await page.locator('main .q:not(.hidden)').evaluateAll(nodes => nodes.map(n => n.dataset.qid));
+    await page.locator('#stopQuizFloatBtn').click();
+    await page.locator('[data-action="stats"]').click();
+    await page.locator('[data-history-detail]').first().click();
+    await page.locator('#historyRetakeBtn').click();
+    const repeated = await page.locator('main .q:not(.hidden)').evaluateAll(nodes => nodes.map(n => n.dataset.qid));
+    expect(repeated).toEqual(original);
+    await expect(page.locator('#statProgress')).toHaveText('0/10');
+    await page.locator('#stopQuizFloatBtn').click();
+  });
+
+  test('recent mistakes rank above equally frequent old mistakes', async ({ page }) => {
+    await fresh(page);
+    const ids = await page.evaluate(() => [document.querySelector('#q1').dataset.qid, document.querySelector('#q2').dataset.qid]);
+    await page.evaluate(([recentId, oldId]) => {
+      const key='enterprise275_state_ea2_v5';
+      const s=JSON.parse(localStorage.getItem(key)||'{}');
+      s.wrong=s.wrong||{}; s.wrong[recentId]=1; s.wrong[oldId]=1;
+      s.questionStats=s.questionStats||{};
+      s.questionStats[recentId]={attempts:1,correct:0,wrong:1,recent:[false],lastAt:new Date().toISOString(),lastResult:'wrong'};
+      s.questionStats[oldId]={attempts:1,correct:0,wrong:1,recent:[false],lastAt:new Date(Date.now()-60*86400000).toISOString(),lastResult:'wrong'};
+      localStorage.setItem(key,JSON.stringify(s));
+    }, ids);
+    await page.reload();
+    await page.waitForSelector('main .q');
+    const scores = await page.evaluate(([a,b]) => [window.StudyV2.getWeaknessScore(a), window.StudyV2.getWeaknessScore(b)], ids);
+    expect(scores[0]).toBeGreaterThan(scores[1]);
   });
 });

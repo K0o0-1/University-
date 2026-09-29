@@ -121,6 +121,17 @@ for rel, count in expected.items():
     if f'0/{count}' not in text:
         fail(f'{rel}: initial progress counter is not 0/{count}')
 
+if not (ROOT / 'assets' / 'study-v2.js').exists():
+    fail('assets/study-v2.js is required')
+if not (ROOT / 'assets' / 'study-plus.js').exists():
+    fail('assets/study-plus.js is required')
+for html_path in (ROOT / 'materials').glob('*.html'):
+    page = html_path.read_text(encoding='utf-8')
+    if '../assets/study-v2.js' not in page:
+        fail(f'{html_path.relative_to(ROOT)}: missing study-v2.js')
+    if '../assets/study-plus.js' not in page:
+        fail(f'{html_path.relative_to(ROOT)}: missing study-plus.js')
+
 if errors:
     print('\nVALIDATION FAILED')
     for e in errors:

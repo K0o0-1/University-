@@ -908,3 +908,43 @@ body.dark .material-card,body.dark .hub-note{background:#151d2d;border-color:#2d
   .quiz-setup-grid,.analytics-grid,.result-metrics{grid-template-columns:1fr}
   .quiz-nav-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
 }
+
+
+/* =========================================================
+   Study Plus — timers / skip / question stats / history
+   ========================================================= */
+.quiz-setup-grid input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-family:inherit}
+.quiz-setup-grid small{color:var(--muted);font-weight:500}
+.quiz-countdown{align-items:center;border:1px solid rgba(255,255,255,.34);background:rgba(255,255,255,.15);color:#fff;padding:7px 12px;border-radius:999px;font-size:.82rem;font-weight:800}
+#quizSkipBtn{background:rgba(255,255,255,.18)}
+.q.quiz-current{box-shadow:0 0 0 2px var(--brand),0 10px 24px rgba(99,102,241,.14)}
+.qstats-question{padding:10px 12px;background:var(--soft);border-radius:10px;line-height:1.8}
+.qstats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.qstats-grid>div{border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:10px;text-align:center}
+.qstats-grid span{display:block;color:var(--muted);font-size:.8rem}
+.qstats-grid b{display:block;margin-top:3px}
+.qstats-meta{color:var(--muted);padding:10px 0 0}
+.trend-chart{height:190px;display:flex;align-items:flex-end;gap:8px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);overflow-x:auto}
+.trend-col{height:100%;min-width:48px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px}
+.trend-track{height:140px;width:24px;border-radius:999px;background:var(--card);border:1px solid var(--line);display:flex;align-items:flex-end;overflow:hidden}
+.trend-bar{display:block;width:100%;background:var(--brand);border-radius:999px 999px 0 0;min-height:3px}
+.trend-col b{font-size:.75rem;color:var(--muted)}
+.history-list{display:grid;gap:8px}
+.history-card{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:right;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:11px 12px;border-radius:10px;cursor:pointer;font-family:inherit}
+.history-card:hover{background:var(--soft);border-color:var(--brand)}
+.history-card small{color:var(--muted)}
+.history-detail-card{max-width:920px!important}
+.history-summary{margin:12px 0}
+.history-questions{display:grid;gap:7px;max-height:52vh;overflow:auto;padding-inline-end:3px}
+.history-question{padding:9px 11px;border:1px solid var(--line);border-inline-start:4px solid var(--muted);border-radius:9px;background:var(--card)}
+.history-question small{display:block;color:var(--muted);margin-top:4px}
+.history-question.hist-correct{border-inline-start-color:var(--ok)}
+.history-question.hist-wrong{border-inline-start-color:var(--err)}
+.history-question.hist-unanswered{opacity:.78}
+@media(max-width:700px){.qstats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.history-card{align-items:flex-start;flex-direction:column}.quiz-countdown{width:100%;justify-content:center}}
+
+body.per-question-timer-mode .q.quiz-mode:not(.quiz-current) ol.o li,
+body.per-question-timer-mode .q.quiz-mode:not(.quiz-current) .grade-btns button,
+body.per-question-timer-mode .q.quiz-mode:not(.quiz-current) .show-answer-btn{pointer-events:none;opacity:.55}
+.q.time-expired{opacity:.72;border-style:dashed}
+.q.time-expired::after{content:'⏰ انتهى وقت السؤال';display:block;margin-top:8px;color:var(--err);font-weight:800;font-size:.8rem}

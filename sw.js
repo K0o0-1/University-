@@ -1,4 +1,4 @@
-const CACHE = 'university-study-v3';
+const CACHE = 'university-study-v4';
 const CORE = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const CORE = [
   './assets/mcq-engine.js',
   './assets/qa-engine.js',
   './assets/study-v2.js',
+  './assets/study-plus.js',
   './manifest.webmanifest',
   './assets/pwa-icon.svg'
 ];

@@ -66,9 +66,17 @@
     const recent = Array.isArray(r.recent) ? r.recent : [];
     let tailCorrect = 0;
     for (let i = recent.length - 1; i >= 0 && recent[i]; i--) tailCorrect++;
-    let score = (Number(r.wrong)||0) * 3 + (r.lastResult === 'wrong' ? 3 : 0) - tailCorrect;
-    if (state.mastered?.[q.id]) score -= 5;
-    return Math.max(0, score);
+
+    const wrong = Number(r.wrong) || Number(state.wrong?.[q.id]) || 0;
+    const stamp = r.lastAt ? new Date(r.lastAt).getTime() : NaN;
+    const ageDays = Number.isFinite(stamp) ? Math.max(0, (Date.now() - stamp) / 86400000) : 30;
+    const recency = Number.isFinite(stamp) ? Math.max(.25, Math.exp(-ageDays / 21)) : .35;
+    let score = wrong * (1.4 + 1.6 * recency);
+    if (r.lastResult === 'wrong') score += 4 * recency;
+    score -= tailCorrect * 1.5;
+    if (r.lastResult === 'correct') score -= Math.min(3, tailCorrect + 1);
+    if (state.mastered?.[q.id]) score -= 6;
+    return Math.max(0, Math.round(score * 100) / 100);
   }
 
   function weakQuestions(){
@@ -257,6 +265,11 @@
     const source = document.getElementById('quizSetupSource').value;
     const countVal = document.getElementById('quizSetupCount').value;
     const order = document.getElementById('quizSetupOrder').value;
+    const timeMode = document.getElementById('quizSetupTimeMode')?.value || 'none';
+    const timeValue = Number(document.getElementById('quizSetupTimeValue')?.value || 0);
+    const timeLimitSec = timeMode === 'total'
+      ? Math.max(1, Math.round(timeValue * 60))
+      : timeMode === 'per-question' ? Math.max(1, Math.round(timeValue)) : 0;
 
     let pool = source === 'filtered' ? engine.filteredItems() : source === 'weak' ? weakQuestions() : questions();
     if (section) pool = pool.filter(q => q.sec === section);
@@ -280,7 +293,9 @@
       sectionLabel,
       source,
       order,
-      requestedCount:countVal
+      requestedCount:countVal,
+      timeMode,
+      timeLimitSec
     });
   }
 
@@ -485,6 +500,7 @@
       <section class="analytics-section"><h4>إحصائيات كل قسم</h4><div class="table-scroll"><table class="analytics-table"><thead><tr><th>القسم</th><th>الأسئلة</th><th>المحاولات</th><th>الدقة</th><th>متقن</th><th>ضعف</th></tr></thead><tbody>${secRows}</tbody></table></div></section>
       <section class="analytics-section"><h4>أهم نقاط الضعف</h4><div class="weak-list">${weakHtml}</div></section>
       <section class="analytics-section"><h4>آخر الاختبارات</h4><div class="table-scroll"><table class="analytics-table"><thead><tr><th>التاريخ</th><th>الوضع</th><th>النطاق</th><th>المجاب</th><th>النتيجة</th><th>الوقت</th></tr></thead><tbody>${histRows}</tbody></table></div></section>`;
+    window.StudyPlus?.enhanceStatsPage?.();
     document.getElementById('statsPageModal').classList.add('show');
   }
 
@@ -531,6 +547,7 @@
     onModeChanged,
     refreshNavigator,
     getMastery:(id) => { const q=qById(id); return q ? mastery(q) : null; },
-    getWeakQuestions:() => weakQuestions()
+    getWeakQuestions:() => weakQuestions(),
+    getWeaknessScore:(id) => { const q=qById(id); return q ? weaknessScore(q) : 0; }
   };
 })();

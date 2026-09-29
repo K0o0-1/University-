@@ -388,6 +388,7 @@ document.addEventListener('click', (e) => {
     }
     saveState(); saveQuizSession(); updateStats();
     window.StudyV2?.onAnswer?.({id:qid, correct:chosen === correct, chosen, mode:quizKind});
+    window.StudyPlus?.onAnswer?.({id:qid, correct:chosen === correct, chosen, mode:quizKind});
     checkQuizCompletion();
   } else if (currentMode === 'study') {
     card.classList.toggle('revealed');
@@ -686,6 +687,7 @@ function switchMode(mode){
   }
   if (mode === 'flash') { flashIdx = 0; updateFlash(); }
   window.StudyV2?.onModeChanged?.(mode);
+  window.StudyPlus?.onModeChanged?.(mode);
 }
 
 function requestStartQuiz(onlyLastWrong=false){
@@ -732,6 +734,7 @@ function startQuiz(onlyLastWrong=false, config={}){
   updateStats();
   showToast((quizKind === 'exam' ? '📝 بدأ الامتحان — ' : '🧠 بدأ التدريب — ') + activeQuizIds.length + ' سؤال');
   window.StudyV2?.onQuizStarted?.({ids:[...activeQuizIds], mode:quizKind, config:{...activeQuizConfig}});
+  window.StudyPlus?.onQuizStarted?.({ids:[...activeQuizIds], mode:quizKind, config:{...activeQuizConfig}});
 }
 
 function updateTimeElapsed(){
@@ -799,6 +802,7 @@ function resumeQuizSession(session, silent=false){
   document.getElementById('quizResult').classList.remove('show');
   updateStats(); updateTimeElapsed();
   window.StudyV2?.onQuizStarted?.({ids:[...activeQuizIds], mode:quizKind, config:{...activeQuizConfig}, resumed:true});
+  window.StudyPlus?.onQuizStarted?.({ids:[...activeQuizIds], mode:quizKind, config:{...activeQuizConfig}, resumed:true});
   if (!silent) showToast('▶️ تم استئناف الاختبار من حيث توقفت');
   return true;
 }
@@ -820,7 +824,7 @@ function finishQuiz(reason='completed'){
     percent:answered ? Math.round(c/answered*100) : 0,
     elapsedMs:quizPausedElapsedMs,
     avgMs:answered ? Math.round(quizPausedElapsedMs/answered) : 0,
-    wrongIds:[...wrongIds], scopeIds:[...activeQuizIds], config:{...activeQuizConfig}
+    wrongIds:[...wrongIds], scopeIds:[...activeQuizIds], answers:{...quizAnswers}, config:{...activeQuizConfig}
   };
   state.quizSession = null;
   saveState();
@@ -830,6 +834,7 @@ function finishQuiz(reason='completed'){
   showQuizResult(reason);
   updateStats();
   window.StudyV2?.onQuizFinished?.(result);
+  window.StudyPlus?.onQuizFinished?.(result);
 }
 
 function showQuizResult(reason='completed'){
@@ -839,7 +844,7 @@ function showQuizResult(reason='completed'){
   document.getElementById('qrScore').textContent = c + ' / ' + answered + '  (' + pct + '%)';
   const elapsed = Math.floor(quizPausedElapsedMs/1000);
   const tm = String(Math.floor(elapsed/60)).padStart(2,'0') + ':' + String(elapsed%60).padStart(2,'0');
-  const prefix = reason === 'stopped' ? '⏹ تم إيقاف الاختبار.' : '✅ اكتمل الاختبار.';
+  const prefix = reason === 'stopped' ? '⏹ تم إيقاف الاختبار.' : reason === 'timeout' ? '⏰ انتهى الوقت.' : '✅ اكتمل الاختبار.';
   document.getElementById('qrMsg').textContent = `${prefix} أجبت عن ${answered} من ${total} — صحيح ${c}، خطأ ${w}، غير مجاب ${Math.max(0,total-answered)} — الوقت ${tm}.`;
   const review = document.getElementById('qrReview');
   const wrongList = (state.lastQuizWrongIds || []).map(questionById).filter(Boolean);
@@ -1267,7 +1272,10 @@ window.StudyEngine = {
   getQuizAnswers:() => ({...quizAnswers}),
   getCurrentMode:() => currentMode,
   getQuizKind:() => quizKind,
-  getQuizConfig:() => ({...activeQuizConfig})
+  getQuizConfig:() => ({...activeQuizConfig}),
+  getQuizElapsedMs:() => quizElapsedMs(),
+  isQuizRunning:() => currentMode === 'quiz' && quizStarted,
+  finishCustomQuiz:(reason='stopped') => { if (currentMode === 'quiz' && quizStarted) finishQuiz(reason); }
 };
 
 /* =========================================================
