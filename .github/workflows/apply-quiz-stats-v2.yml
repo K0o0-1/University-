@@ -1,0 +1,41 @@
+name: Apply Quiz Analytics V2
+
+on:
+  push:
+    branches:
+      - feature-quiz-stats-v2-20260929
+    paths:
+      - tools/apply_quiz_stats_v2.py
+      - .github/workflows/apply-quiz-stats-v2.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature-quiz-stats-v2-20260929
+      - name: Apply Quiz and Analytics V2
+        run: python3 tools/apply_quiz_stats_v2.py
+      - name: Validate generated project
+        run: |
+          python3 tools/validate.py
+          node --check assets/mcq-engine.js
+          node --check assets/qa-engine.js
+          node --check assets/study-v2.js
+          node --check sw.js
+      - name: Commit generated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets materials tests tools README.md sw.js .github/workflows/validate.yml
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git commit -m "Implement Quiz and Analytics V2"
+          git push origin HEAD:feature-quiz-stats-v2-20260929
