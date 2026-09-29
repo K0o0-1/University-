@@ -60,6 +60,8 @@ let activeQuizIds = [];
 let quizAnswers = {};
 let quizPausedElapsedMs = 0;
 let resumeModalShownForSession = false;
+let quizKind = 'practice';
+let activeQuizConfig = {};
 
 function questionById(id){ return ALL_Q.find(q => q.id === id); }
 function activeQuizItems(){ return activeQuizIds.map(questionById).filter(Boolean); }
@@ -359,6 +361,7 @@ document.addEventListener('click', (e) => {
     const correct = item.a;
     quizAnswers[qid] = chosen;
     card.classList.add('answered');
+    if (quizKind === 'exam') li.classList.add('exam-choice');
     card.querySelectorAll('ol.o li').forEach(x => {
       const i = +x.dataset.idx;
       if (i === correct) x.classList.add('correct');
@@ -372,19 +375,19 @@ document.addEventListener('click', (e) => {
       if (currentStreak > bestStreak) bestStreak = currentStreak;
       state.streak = currentStreak;
       state.bestStreak = bestStreak;
-      showStreakPopup(currentStreak);
-      beep(880, 0.1);
+      if (quizKind !== 'exam') { showStreakPopup(currentStreak); beep(880, 0.1); }
     } else {
       state.wrong[qid] = (state.wrong[qid]||0)+1;
       state.quizScore.w++;
       currentStreak = 0;
       state.streak = 0;
-      beep(220, 0.2);
+      if (quizKind !== 'exam') beep(220, 0.2);
       const tag = card.querySelector('.tag.err');
       tag.textContent = 'أخطأت ' + state.wrong[qid];
       tag.classList.remove('hidden');
     }
     saveState(); saveQuizSession(); updateStats();
+    window.StudyV2?.onAnswer?.({id:qid, correct:chosen === correct, chosen, mode:quizKind});
     checkQuizCompletion();
   } else if (currentMode === 'study') {
     card.classList.toggle('revealed');
@@ -432,9 +435,10 @@ function updateStats(){
   document.getElementById('progressFill').style.width = (revealed/total*100) + '%';
   document.getElementById('sbFill').style.width = (revealed/total*100) + '%';
   document.getElementById('sbPct').textContent = Math.round(revealed/total*100) + '%';
-  document.getElementById('statStreak').textContent = state.streak || 0;
+  const examRunning = currentMode === 'quiz' && quizStarted && quizKind === 'exam';
+  document.getElementById('statStreak').textContent = examRunning ? '—' : (state.streak || 0);
   const c = state.quizScore.c || 0, w = state.quizScore.w || 0;
-  document.getElementById('statScore').textContent = (c || w) ? c + ' صح / ' + w + ' خطأ' : '—';
+  document.getElementById('statScore').textContent = examRunning ? 'مخفي' : ((c || w) ? c + ' صح / ' + w + ' خطأ' : '—');
 }
 
 function showStreakPopup(n){
@@ -640,6 +644,8 @@ function saveQuizSession(){
   state.quizSession = {
     version: 3,
     material: MATERIAL.slug,
+    quizKind,
+    config: {...activeQuizConfig},
     elapsedMs: quizElapsedMs(),
     score: {c: state.quizScore.c || 0, w: state.quizScore.w || 0},
     streak: currentStreak || 0,
@@ -679,6 +685,7 @@ function switchMode(mode){
     updateStats();
   }
   if (mode === 'flash') { flashIdx = 0; updateFlash(); }
+  window.StudyV2?.onModeChanged?.(mode);
 }
 
 function requestStartQuiz(onlyLastWrong=false){
@@ -689,10 +696,12 @@ function requestStartQuiz(onlyLastWrong=false){
   startQuiz(onlyLastWrong);
 }
 
-function startQuiz(onlyLastWrong=false){
+function startQuiz(onlyLastWrong=false, config={}){
   let list = onlyLastWrong
     ? (state.lastQuizWrongIds || []).map(questionById).filter(Boolean)
-    : filteredItems();
+    : (Array.isArray(config.scopeIds) ? config.scopeIds.map(questionById).filter(Boolean) : filteredItems());
+  quizKind = config.mode === 'exam' ? 'exam' : 'practice';
+  activeQuizConfig = {...config, mode:quizKind};
   if (!list.length) {
     alert(onlyLastWrong ? '🎉 لا توجد أخطاء في الاختبار الأخير.' : '⚠️ لا توجد أسئلة مطابقة للفلاتر الحالية.');
     return;
@@ -707,6 +716,8 @@ function startQuiz(onlyLastWrong=false){
   bestStreak = Math.max(Number(state.bestStreak) || 0, Number(bestStreak) || 0);
   currentMode = 'quiz';
   document.body.classList.remove('flash');
+  document.body.classList.toggle('exam-mode', quizKind === 'exam');
+  document.body.classList.toggle('practice-mode', quizKind === 'practice');
   setQuizLayout(activeQuizIds);
   resetQuizCards();
   document.getElementById('quizResult').classList.remove('show');
@@ -719,7 +730,8 @@ function startQuiz(onlyLastWrong=false){
   lockStudyControls(true);
   saveQuizSession();
   updateStats();
-  showToast('📝 بدأ الاختبار — ' + activeQuizIds.length + ' سؤال');
+  showToast((quizKind === 'exam' ? '📝 بدأ الامتحان — ' : '🧠 بدأ التدريب — ') + activeQuizIds.length + ' سؤال');
+  window.StudyV2?.onQuizStarted?.({ids:[...activeQuizIds], mode:quizKind, config:{...activeQuizConfig}});
 }
 
 function updateTimeElapsed(){
@@ -741,7 +753,7 @@ function checkQuizCompletion(){
 function resetQuizCards(){
   activeQuizItems().forEach(q => {
     q.el.classList.remove('answered', 'revealed');
-    q.el.querySelectorAll('ol.o li').forEach(li => li.classList.remove('wrong'));
+    q.el.querySelectorAll('ol.o li').forEach(li => li.classList.remove('wrong', 'exam-choice'));
   });
 }
 
@@ -752,6 +764,7 @@ function restoreQuizAnswer(q, chosen){
     li.classList.remove('wrong');
     li.classList.toggle('correct', idx === q.a);
     if (idx === Number(chosen) && Number(chosen) !== q.a) li.classList.add('wrong');
+    if (quizKind === 'exam' && idx === Number(chosen)) li.classList.add('exam-choice');
   });
 }
 
@@ -765,9 +778,13 @@ function resumeQuizSession(session, silent=false){
   state.streak = currentStreak;
   bestStreak = Math.max(Number(session.bestStreak)||0, Number(state.bestStreak)||0);
   state.bestStreak = bestStreak;
+  quizKind = session.quizKind === 'exam' ? 'exam' : 'practice';
+  activeQuizConfig = session.config || {mode:quizKind};
   quizPausedElapsedMs = Number(session.elapsedMs) || 0;
   currentMode = 'quiz';
   document.body.classList.remove('flash');
+  document.body.classList.toggle('exam-mode', quizKind === 'exam');
+  document.body.classList.toggle('practice-mode', quizKind === 'practice');
   setQuizLayout(activeQuizIds);
   resetQuizCards();
   Object.entries(quizAnswers).forEach(([id, chosen]) => {
@@ -781,6 +798,7 @@ function resumeQuizSession(session, silent=false){
   lockStudyControls(true);
   document.getElementById('quizResult').classList.remove('show');
   updateStats(); updateTimeElapsed();
+  window.StudyV2?.onQuizStarted?.({ids:[...activeQuizIds], mode:quizKind, config:{...activeQuizConfig}, resumed:true});
   if (!silent) showToast('▶️ تم استئناف الاختبار من حيث توقفت');
   return true;
 }
@@ -793,12 +811,25 @@ function finishQuiz(reason='completed'){
   currentMode = 'review';
   const wrongIds = activeQuizIds.filter(id => Object.prototype.hasOwnProperty.call(quizAnswers, id) && Number(quizAnswers[id]) !== questionById(id).a);
   state.lastQuizWrongIds = wrongIds;
+  const c = state.quizScore.c || 0, w = state.quizScore.w || 0;
+  const answered = c + w, total = activeQuizIds.length;
+  const result = {
+    id:'quiz-' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
+    at:new Date().toISOString(), material:MATERIAL.slug, mode:quizKind, reason,
+    total, answered, correct:c, wrong:w, unanswered:Math.max(0,total-answered),
+    percent:answered ? Math.round(c/answered*100) : 0,
+    elapsedMs:quizPausedElapsedMs,
+    avgMs:answered ? Math.round(quizPausedElapsedMs/answered) : 0,
+    wrongIds:[...wrongIds], scopeIds:[...activeQuizIds], config:{...activeQuizConfig}
+  };
   state.quizSession = null;
   saveState();
   setStopButtons(false);
   lockStudyControls(false);
+  document.body.classList.remove('exam-mode', 'practice-mode');
   showQuizResult(reason);
   updateStats();
+  window.StudyV2?.onQuizFinished?.(result);
 }
 
 function showQuizResult(reason='completed'){
@@ -819,7 +850,7 @@ function showQuizResult(reason='completed'){
 }
 
 function stopQuizNow(){ if (currentMode === 'quiz' && quizStarted) finishQuiz('stopped'); }
-function retryWrongOnly(){ startQuiz(true); }
+function retryWrongOnly(){ startQuiz(true, {mode:'practice', source:'last-wrong'}); }
 
 /* =========================================================
    البطاقات
@@ -1021,6 +1052,7 @@ document.getElementById('resetConfirm').addEventListener('click', () => {
    الإحصائيات
    ========================================================= */
 function openStatsModal(){
+  if (window.StudyV2?.openStatsPage) { window.StudyV2.openStatsPage(); return; }
   const total = ALL_Q.length;
   const mastered = Object.keys(state.mastered).filter(k => state.mastered[k]).length;
   const fav = Object.keys(state.fav).filter(k => state.fav[k]).length;
@@ -1211,6 +1243,32 @@ document.addEventListener('keydown', (e) => {
     }
   }
 });
+
+
+/* =========================================================
+   Study V2 public API
+   ========================================================= */
+window.StudyEngine = {
+  kind:'mcq',
+  material:MATERIAL,
+  sections:SECTIONS,
+  state,
+  saveState,
+  allQuestions:() => ALL_Q,
+  filteredItems,
+  questionById,
+  startCustomQuiz:(config={}) => startQuiz(false, config),
+  showResumeModal,
+  switchMode,
+  updateStats,
+  applyFilters,
+  showToast,
+  getActiveQuizIds:() => [...activeQuizIds],
+  getQuizAnswers:() => ({...quizAnswers}),
+  getCurrentMode:() => currentMode,
+  getQuizKind:() => quizKind,
+  getQuizConfig:() => ({...activeQuizConfig})
+};
 
 /* =========================================================
    PWA

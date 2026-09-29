@@ -18,6 +18,7 @@ jobs:
         run: |
           node --check assets/mcq-engine.js
           node --check assets/qa-engine.js
+          node --check assets/study-v2.js
           node --check data/enterprise-architecture.js
           node --check data/flutter-mcq.js
           node --check data/security-mcq.js
@@ -45,7 +46,7 @@ jobs:
           done
           cat /tmp/university-http.log
           exit 1
-      - name: Run browser behavior tests
+      - name: Run complete browser behavior suite
         env:
           BASE_URL: http://127.0.0.1:4173
-        run: npx playwright test tests/ui.spec.js --workers=1
+        run: npx playwright test tests --workers=1

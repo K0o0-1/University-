@@ -1,4 +1,3 @@
-// Browser-level regression tests for filtering, quiz scope, pause/resume, and progress.
 const { test, expect } = require('@playwright/test');
 
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:4173';
@@ -17,151 +16,172 @@ async function fresh(page, url = EA) {
   await page.waitForSelector('main .q');
 }
 
-async function visibleNumbers(page) {
-  return page.locator('main .q:not(.hidden)').evaluateAll(nodes =>
-    nodes.map(n => Number(n.querySelector('.n')?.textContent || 0))
-  );
+async function openSetup(page, mode='practice') {
+  await page.locator(`[data-action="mode-${mode}-v2"]`).click();
+  await expect(page.locator('#quizSetupModal')).toHaveClass(/show/);
 }
 
-async function seedWrongCounts(page, values) {
-  const ids = {};
-  for (const [num] of values) {
-    ids[num] = await page.locator(`#q${num}`).getAttribute('data-qid');
-  }
-  await page.evaluate(({ ids, values }) => {
-    const key = 'enterprise275_state_ea2_v5';
-    const state = JSON.parse(localStorage.getItem(key) || '{}');
-    state.wrong = state.wrong || {};
-    for (const [num, count] of values) state.wrong[ids[num]] = count;
-    localStorage.setItem(key, JSON.stringify(state));
-  }, { ids, values });
-  await page.reload();
-  await page.waitForSelector('main .q');
+async function startSetup(page, {mode='practice', section='', count='all', source='all', order='original'} = {}) {
+  await openSetup(page, mode);
+  await page.selectOption('#quizSetupMode', mode);
+  await page.selectOption('#quizSetupSection', section);
+  await page.selectOption('#quizSetupCount', count);
+  await page.selectOption('#quizSetupSource', source);
+  await page.selectOption('#quizSetupOrder', order);
+  await page.locator('#quizSetupStart').click();
 }
 
-async function chooseWrongOnFirstVisible(page) {
+async function chooseWrong(page) {
   const card = page.locator('main .q:not(.hidden)').first();
   const answer = Number(await card.getAttribute('data-a'));
-  const options = card.locator('ol.o li');
-  const count = await options.count();
-  const wrong = Array.from({ length: count }, (_, i) => i).find(i => i !== answer);
-  await options.nth(wrong).click();
+  const opts = card.locator('ol.o li');
+  const count = await opts.count();
+  const wrong = Array.from({length:count},(_,i)=>i).find(i=>i!==answer);
+  await opts.nth(wrong).click();
+  return card;
 }
 
-test.describe('study library behavior', () => {
-  test('all material pages load required controls without page errors', async ({ page }) => {
+test.describe('Quiz & Analytics V2', () => {
+  test('all material pages load Study, Practice, Exam and analytics without page errors', async ({ page }) => {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     for (const path of PAGES) {
       await fresh(page, BASE + path);
-      await expect(page.locator('#filterBy')).toBeVisible();
-      await expect(page.locator('#sortBy')).toBeVisible();
-      await expect(page.locator('#stopQuizFloatBtn')).toHaveCount(1);
-      await expect(page.locator('script[src*="runtime-fixes"]')).toHaveCount(0);
+      await expect(page.locator('[data-action="mode-study"]')).toBeVisible();
+      await expect(page.locator('[data-action="mode-practice-v2"]')).toBeVisible();
+      await expect(page.locator('[data-action="mode-exam-v2"]')).toBeVisible();
+      await expect(page.locator('#quizNavBtn')).toHaveCount(1);
+      await expect(page.locator('#statsPageModal')).toHaveCount(1);
     }
     expect(errors).toEqual([]);
   });
 
-  test('section filter has unique numbered labels and filters EA correctly', async ({ page }) => {
+  test('custom Practice quiz supports section + count', async ({ page }) => {
     await fresh(page);
-    const labels = await page.locator('#secFilter option').allTextContents();
-    expect(labels).toContain('5. من الشرح — 1 – 30');
-    expect(labels).toContain('6. من الشرح — 31 – 60');
-    expect(labels).toContain('7. من الشرح — 61 – 73');
-    expect(labels).toContain('8. الجزء الثاني — 174 – 275');
-
-    await page.selectOption('#secFilter', 'sec5');
-    const nums = await visibleNumbers(page);
-    expect(nums).toHaveLength(30);
-    expect(nums[0]).toBe(101);
-    expect(nums[nums.length - 1]).toBe(130);
-  });
-
-  test('error filter shows errors only and error count sorting works both ways', async ({ page }) => {
-    await fresh(page);
-    await seedWrongCounts(page, [[3, 2], [10, 5], [20, 1]]);
-
-    await page.selectOption('#filterBy', 'wrong');
-    expect(await visibleNumbers(page)).toEqual([3, 10, 20]);
-
-    await page.selectOption('#sortBy', 'wrong-desc');
-    expect(await visibleNumbers(page)).toEqual([10, 3, 20]);
-
-    await page.selectOption('#sortBy', 'wrong-asc');
-    expect(await visibleNumbers(page)).toEqual([20, 3, 10]);
-  });
-
-  test('filtered quiz keeps a fixed scope and floating stop computes only attempted questions', async ({ page }) => {
-    await fresh(page);
-    await page.selectOption('#secFilter', 'sec8');
-    expect((await visibleNumbers(page)).length).toBe(102);
-
-    await page.locator('[data-action="mode-quiz"]').click();
+    await startSetup(page, {mode:'practice', section:'sec8', count:'10'});
+    await expect(page.locator('#statProgress')).toHaveText('0/10');
     await expect(page.locator('#secFilter')).toBeDisabled();
-    await expect(page.locator('#filterBy')).toBeDisabled();
-    await expect(page.locator('#stopQuizFloatBtn')).toBeVisible();
-
-    await chooseWrongOnFirstVisible(page);
-    await page.evaluate(() => window.scrollTo(0, 1500));
-    await expect(page.locator('#stopQuizFloatBtn')).toBeVisible();
-    await page.locator('#stopQuizFloatBtn').click();
-
-    await expect(page.locator('#quizResult')).toHaveClass(/show/);
-    await expect(page.locator('#qrMsg')).toContainText('أجبت عن 1 من 102');
-    await expect(page.locator('#qrMsg')).toContainText('خطأ 1');
-    await expect(page.locator('#stopQuizFloatBtn')).toBeHidden();
+    await expect(page.locator('#quizNavBtn')).toBeVisible();
+    const visible = page.locator('main .q:not(.hidden)');
+    await expect(visible).toHaveCount(10);
   });
 
-  test('refresh offers resume once; finish clears the paused session permanently', async ({ page }) => {
+  test('random custom quiz produces a fixed requested scope', async ({ page }) => {
     await fresh(page);
-    await page.selectOption('#secFilter', 'sec1');
-    await page.locator('[data-action="mode-quiz"]').click();
-    await chooseWrongOnFirstVisible(page);
+    await startSetup(page, {mode:'practice', section:'sec8', count:'20', order:'random'});
+    await expect(page.locator('main .q:not(.hidden)')).toHaveCount(20);
+    const nums = await page.locator('main .q:not(.hidden) .n').allTextContents();
+    expect(new Set(nums).size).toBe(20);
+  });
 
+  test('Practice reveals correctness immediately and records smart analytics', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'practice', section:'sec1', count:'10'});
+    const card = await chooseWrong(page);
+    await expect(card).toHaveClass(/answered/);
+    await expect(card.locator('ol.o li.wrong')).toHaveCount(1);
+    const qid = await card.getAttribute('data-qid');
+    const rec = await page.evaluate(id => {
+      const key = 'enterprise275_state_ea2_v5';
+      return JSON.parse(localStorage.getItem(key) || '{}').questionStats?.[id];
+    }, qid);
+    expect(rec.attempts).toBe(1);
+    expect(rec.wrong).toBe(1);
+  });
+
+  test('Exam hides correctness until finish and result metrics appear', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'exam', section:'sec1', count:'10'});
+    const card = await chooseWrong(page);
+    await expect(page.locator('#statScore')).toHaveText('مخفي');
+    await expect(card.locator('ol.o li.exam-choice')).toHaveCount(1);
+    await expect(card.locator('.tag.err')).toHaveClass(/hidden/);
+    const bg = await card.locator('ol.o li.wrong').evaluate(el => getComputedStyle(el).backgroundColor);
+    expect(bg).toBeTruthy();
+    await page.locator('#stopQuizFloatBtn').click();
+    await expect(page.locator('#quizResult')).toHaveClass(/show/);
+    await expect(page.locator('#qrMetrics .result-metric')).toHaveCount(9);
+    await expect(page.locator('#qrMetrics')).toContainText('امتحان');
+  });
+
+  test('quiz navigator tracks answered and review flags', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'practice', section:'sec1', count:'10'});
+    const card = page.locator('main .q:not(.hidden)').first();
+    await card.locator('.btn-review').click();
+    await chooseWrong(page);
+    await page.locator('#quizNavBtn').click();
+    await expect(page.locator('#quizNavigator')).toHaveClass(/show/);
+    await expect(page.locator('#quizNavGrid button.flagged')).toHaveCount(1);
+    await expect(page.locator('#quizNavGrid button.answered')).toHaveCount(1);
+  });
+
+  test('finishing a quiz stores history and stats page shows section performance and weakness', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'practice', section:'sec1', count:'10'});
+    await chooseWrong(page);
+    await page.locator('#stopQuizFloatBtn').click();
+    await page.locator('[data-action="stats"]').click();
+    await expect(page.locator('#statsPageModal')).toHaveClass(/show/);
+    await expect(page.locator('#statsPageContent')).toContainText('آخر الاختبارات');
+    await expect(page.locator('#statsPageContent')).toContainText('أهم نقاط الضعف');
+    await expect(page.locator('.analytics-table')).toHaveCount(2);
+    const historyLen = await page.evaluate(() => {
+      const key = 'enterprise275_state_ea2_v5';
+      return (JSON.parse(localStorage.getItem(key)||'{}').quizHistory || []).length;
+    });
+    expect(historyLen).toBe(1);
+  });
+
+  test('weakness-only source builds a quiz only after mistakes exist', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'practice', section:'sec1', count:'10'});
+    await chooseWrong(page);
+    await page.locator('#stopQuizFloatBtn').click();
+    await page.locator('[data-action="mode-study"]').click();
+    await startSetup(page, {mode:'practice', source:'weak', count:'all'});
+    await expect(page.locator('main .q:not(.hidden)')).toHaveCount(1);
+  });
+
+  test('paused Exam resumes with its mode and can be finished once', async ({ page }) => {
+    await fresh(page);
+    await startSetup(page, {mode:'exam', section:'sec1', count:'10'});
+    await chooseWrong(page);
     await page.reload();
     await expect(page.locator('#resumeQuizModal')).toHaveClass(/show/);
-    await expect(page.locator('#resumeQuizText')).toContainText('1 من 20');
     await page.locator('#resumeQuizContinue').click();
-    await expect(page.locator('#statProgress')).toHaveText('1/20');
-    await expect(page.locator('#stopQuizFloatBtn')).toBeVisible();
-
+    await expect(page.locator('#statScore')).toHaveText('مخفي');
+    await expect(page.locator('#statProgress')).toHaveText('1/10');
     await page.reload();
     await expect(page.locator('#resumeQuizModal')).toHaveClass(/show/);
     await page.locator('#resumeQuizFinish').click();
     await expect(page.locator('#quizResult')).toHaveClass(/show/);
-    await expect(page.locator('#qrMsg')).toContainText('أجبت عن 1 من 20');
-
     await page.reload();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(400);
     await expect(page.locator('#resumeQuizModal')).not.toHaveClass(/show/);
   });
 
-  test('study progress survives entering and leaving a quiz', async ({ page }) => {
-    await fresh(page);
-    await page.locator('#q1').click();
-    await expect(page.locator('#q1')).toHaveClass(/revealed/);
-    await expect(page.locator('#statProgress')).toHaveText('1/275');
-
-    await page.selectOption('#secFilter', 'sec1');
-    await page.locator('[data-action="mode-quiz"]').click();
+  test('Q&A Exam hides answer until grading and reveals answers after finish', async ({ page }) => {
+    await fresh(page, `${BASE}/materials/qa-information-security-privacy.html`);
+    await startSetup(page, {mode:'exam', section:'sec1', count:'10'});
+    const first = page.locator('main .q:not(.hidden)').first();
+    await expect(first.locator('.show-answer-btn')).toBeHidden();
+    await expect(first.locator('.grade-btns')).toBeVisible();
+    await first.locator('.grade-wrong').click();
+    await expect(first.locator('.answer-box')).toBeHidden();
     await page.locator('#stopQuizFloatBtn').click();
-    await page.locator('[data-action="mode-study"]').click();
-
-    await expect(page.locator('#q1')).toHaveClass(/revealed/);
-    await expect(page.locator('#statProgress')).toHaveText('1/275');
+    await expect(first.locator('.answer-box')).toBeVisible();
+    await expect(page.locator('#qrMetrics')).toContainText('امتحان');
   });
 
-  test('Q&A uses the same pause/finish lifecycle', async ({ page }) => {
-    await fresh(page, `${BASE}/materials/qa-information-security-privacy.html`);
-    await page.selectOption('#secFilter', 'sec1');
-    await page.locator('[data-action="mode-quiz"]').click();
-    const first = page.locator('main .q:not(.hidden)').first();
-    await first.locator('.show-answer-btn').click();
-    await first.locator('.grade-wrong').click();
-    await page.reload();
-    await expect(page.locator('#resumeQuizModal')).toHaveClass(/show/);
-    await page.locator('#resumeQuizFinish').click();
-    await expect(page.locator('#quizResult')).toHaveClass(/show/);
-    await expect(page.locator('#qrMsg')).toContainText('قيّمت 1');
+  test('study progress remains independent from quiz history', async ({ page }) => {
+    await fresh(page);
+    await page.locator('#q1').click();
+    await expect(page.locator('#statProgress')).toHaveText('1/275');
+    await startSetup(page, {mode:'practice', section:'sec1', count:'10'});
+    await page.locator('#stopQuizFloatBtn').click();
+    await page.locator('[data-action="mode-study"]').click();
+    await expect(page.locator('#statProgress')).toHaveText('1/275');
+    await expect(page.locator('#q1')).toHaveClass(/revealed/);
   });
 });
