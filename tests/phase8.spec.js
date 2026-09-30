@@ -2,10 +2,10 @@ const { test, expect } = require('@playwright/test');
 
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:4173';
 const MATERIALS = [
-  { path:'/materials/enterprise-architecture.html', title:'Enterprise Architecture', count:275, kind:'mcq' },
-  { path:'/materials/mcq-flutter.html', title:'MCQ Flutter', count:341, kind:'mcq' },
-  { path:'/materials/mcq-information-security-privacy.html', title:'MCQ Information Systems Security & Privacy', count:200, kind:'mcq' },
-  { path:'/materials/qa-information-security-privacy.html', title:'Q&A Information Systems Security & Privacy', count:100, kind:'qa' },
+  { path:'/materials/enterprise-architecture.html', heading:'Enterprise Architecture', count:275, kind:'mcq' },
+  { path:'/materials/mcq-flutter.html', heading:'MCQ Flutter', count:341, kind:'mcq' },
+  { path:'/materials/mcq-information-security-privacy.html', heading:'أمن نظم المعلومات والخصوصية', count:200, kind:'mcq' },
+  { path:'/materials/qa-information-security-privacy.html', heading:'Q&A Information Systems Security & Privacy', count:100, kind:'qa' },
 ];
 const EA = MATERIALS[0].path;
 const FLUTTER = MATERIALS[1].path;
@@ -92,7 +92,7 @@ test.describe('Phase 8 Final End-to-End Acceptance', () => {
       expect(snapshot.primaryButtons).toBe(4);
       expect(snapshot.modules).toEqual([true,true,true,true,true]);
       expect(snapshot.cleanupReady).toBe(true);
-      await expect(page.locator('header h1')).toContainText(material.title.replace(/^MCQ /,'').replace(/^Q&A /,''));
+      await expect(page.locator('header h1')).toHaveText(material.heading);
     }
 
     expect(errors).toEqual([]);
@@ -158,7 +158,7 @@ test.describe('Phase 8 Final End-to-End Acceptance', () => {
     await fresh(page, QA);
 
     const first = page.locator('#q1');
-    await first.locator('.show-answer-btn').click();
+    await first.click();
     await expect(first).toHaveClass(/revealed/);
     await expect(page.locator('#phase2Studied')).toHaveText('1/100');
 
