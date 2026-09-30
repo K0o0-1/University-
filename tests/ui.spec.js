@@ -17,13 +17,13 @@ async function fresh(page, url = EA) {
 }
 
 async function openSetup(page, mode='practice') {
-  await page.locator(`[data-action="mode-${mode}-v2"]`).click();
+  await page.locator('#phase1QuizBtn').click();
   await expect(page.locator('#quizSetupModal')).toHaveClass(/show/);
+  await page.selectOption('#quizSetupMode', mode);
 }
 
 async function startSetup(page, {mode='practice', section='', count='all', source='all', order='original', timeMode='none', timeValue=null} = {}) {
   await openSetup(page, mode);
-  await page.selectOption('#quizSetupMode', mode);
   await page.selectOption('#quizSetupSection', section);
   await page.selectOption('#quizSetupCount', count);
   await page.selectOption('#quizSetupSource', source);
@@ -44,14 +44,22 @@ async function chooseWrong(page) {
 }
 
 test.describe('Quiz & Analytics V2', () => {
-  test('all material pages load Study, Practice, Exam and analytics without page errors', async ({ page }) => {
+  test('all material pages load the four-item primary navigation and analytics without page errors', async ({ page }) => {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     for (const path of PAGES) {
       await fresh(page, BASE + path);
+      await expect(page.locator('#phase1PrimaryNav > button')).toHaveCount(4);
       await expect(page.locator('[data-action="mode-study"]')).toBeVisible();
-      await expect(page.locator('[data-action="mode-practice-v2"]')).toBeVisible();
-      await expect(page.locator('[data-action="mode-exam-v2"]')).toBeVisible();
+      await expect(page.locator('#phase1QuizBtn')).toBeVisible();
+      await expect(page.locator('[data-action="mode-flash"]')).toBeVisible();
+      await expect(page.locator('[data-action="stats"]')).toBeVisible();
+      await expect(page.locator('[data-action="mode-practice-v2"]')).toBeHidden();
+      await expect(page.locator('[data-action="mode-exam-v2"]')).toBeHidden();
+      await expect(page.locator('[data-action="shuffle"]')).toBeHidden();
+      await expect(page.locator('[data-action="dark"]')).toBeHidden();
+      await expect(page.locator('#phase1StudyToolsBtn')).toBeVisible();
+      await expect(page.locator('#phase1MoreBtn')).toBeVisible();
       await expect(page.locator('#quizNavBtn')).toHaveCount(1);
       await expect(page.locator('#statsPageModal')).toHaveCount(1);
     }
