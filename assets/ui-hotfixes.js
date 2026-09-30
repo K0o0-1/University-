@@ -12,14 +12,9 @@
   style.textContent = `
     body.phase1-navigation-enabled header{
       position:relative;
-      z-index:250;
-      overflow:visible!important
+      z-index:250
     }
-    body.phase1-navigation-enabled .phase1-toolbar,
-    body.phase1-navigation-enabled .phase1-secondary-row,
-    body.phase1-navigation-enabled .phase1-menu-wrap{
-      overflow:visible!important
-    }
+    body.phase1-navigation-enabled .phase1-secondary-row{position:relative;z-index:260}
     body.phase1-navigation-enabled .phase1-menu-wrap.open{z-index:270}
     body.phase1-navigation-enabled .phase1-menu-panel{z-index:280!important}
     @media(max-width:760px){
