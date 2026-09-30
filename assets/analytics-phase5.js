@@ -54,6 +54,7 @@
       #statsPageModal.phase5-analytics-modal{align-items:stretch;padding:0}
       #statsPageModal .phase5-stats-card{width:100%;max-width:none;max-height:100dvh;height:100dvh;border-radius:0;border:0}
       #statsPageModal .stats-page-head{padding:13px 14px 7px}
+      body.phase5-analytics-ux-enabled .scroll-btns{bottom:calc(94px + env(safe-area-inset-bottom))}
       .phase5-stats-subtitle{padding:0 14px 10px}
       #statsPageContent{padding:10px 10px calc(18px + env(safe-area-inset-bottom))}
       .phase5-tabs{gap:5px;margin:0 0 10px;padding-bottom:7px}
@@ -171,6 +172,14 @@
     overview.append(grid,secondary);
     if (weakSection) { addWeakDisclosure(weakSection); overview.appendChild(weakSection); }
     if (trendSection) overview.appendChild(trendSection);
+    const latestHistory = historySection?.querySelector('.history-card');
+    if (latestHistory) {
+      const preview = document.createElement('section');
+      preview.className = 'analytics-section phase5-latest-preview';
+      preview.innerHTML = '<h4>🧾 آخر اختبار</h4>';
+      preview.appendChild(latestHistory.cloneNode(true));
+      overview.appendChild(preview);
+    }
     overview.appendChild(summaryDetails);
 
     const sectionsPanel = document.createElement('section');
