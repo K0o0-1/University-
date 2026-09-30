@@ -16,6 +16,8 @@
       position:relative;display:flex;align-items:center;justify-content:flex-end;gap:5px;
       flex:0 0 auto;flex-wrap:nowrap;overflow:visible
     }
+    body.phase3-question-card-enabled .q.phase3-card-menu-open{position:relative;z-index:220}
+    body.phase3-question-card-enabled .q .qactions.phase3-menu-open{z-index:240}
     body.phase3-question-card-enabled .q .qactions>.btn-review,
     body.phase3-question-card-enabled .q .qactions>.phase3-more-trigger{
       display:inline-flex!important;align-items:center;justify-content:center;width:40px;height:40px;
@@ -73,6 +75,7 @@
   function closeMenu(actions){
     if (!actions) return;
     actions.classList.remove('phase3-menu-open');
+    actions.closest('.q')?.classList.remove('phase3-card-menu-open');
     actions.querySelector('.phase3-more-trigger')?.setAttribute('aria-expanded','false');
     if (openActions === actions) openActions = null;
   }
@@ -154,6 +157,7 @@
       closeAllMenus();
       if (opening) {
         actions.classList.add('phase3-menu-open');
+        actions.closest('.q')?.classList.add('phase3-card-menu-open');
         trigger.setAttribute('aria-expanded','true');
         openActions = actions;
       }
@@ -173,7 +177,6 @@
   document.addEventListener('keydown',e => {
     if (e.key === 'Escape') closeAllMenus();
   });
-  window.addEventListener('scroll',closeAllMenus,{passive:true});
 
   window.StudyPhase3 = {
     closeAllMenus,
