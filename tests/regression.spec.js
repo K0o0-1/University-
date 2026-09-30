@@ -47,7 +47,7 @@ async function chooseWrongOnFirstVisible(page) {
 }
 
 async function startPractice(page, {source='filtered', section='', count='all'} = {}) {
-  await page.locator('[data-action="mode-practice-v2"]').click();
+  await page.locator('#phase1QuizBtn').click();
   await expect(page.locator('#quizSetupModal')).toHaveClass(/show/);
   await page.selectOption('#quizSetupMode', 'practice');
   await page.selectOption('#quizSetupSource', source);
@@ -57,7 +57,7 @@ async function startPractice(page, {source='filtered', section='', count='all'} 
 }
 
 test.describe('full regression suite', () => {
-  test('all material pages keep filters, sort, floating stop and new mode controls', async ({ page }) => {
+  test('all material pages keep filters, sort, floating stop and Phase 1 navigation', async ({ page }) => {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     for (const path of PAGES) {
@@ -66,10 +66,13 @@ test.describe('full regression suite', () => {
       await expect(page.locator('#sortBy')).toBeVisible();
       await expect(page.locator('#secFilter')).toBeVisible();
       await expect(page.locator('#stopQuizFloatBtn')).toHaveCount(1);
+      await expect(page.locator('#phase1PrimaryNav > button')).toHaveCount(4);
       await expect(page.locator('[data-action="mode-study"]')).toBeVisible();
-      await expect(page.locator('[data-action="mode-practice-v2"]')).toBeVisible();
-      await expect(page.locator('[data-action="mode-exam-v2"]')).toBeVisible();
+      await expect(page.locator('#phase1QuizBtn')).toBeVisible();
       await expect(page.locator('[data-action="mode-flash"]')).toBeVisible();
+      await expect(page.locator('[data-action="stats"]')).toBeVisible();
+      await expect(page.locator('[data-action="mode-practice-v2"]')).toBeHidden();
+      await expect(page.locator('[data-action="mode-exam-v2"]')).toBeHidden();
       await expect(page.locator('script[src*="runtime-fixes"]')).toHaveCount(0);
     }
     expect(errors).toEqual([]);
