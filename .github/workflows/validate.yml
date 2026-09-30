@@ -20,6 +20,7 @@ jobs:
           node --check assets/qa-engine.js
           node --check assets/study-v2.js
           node --check assets/study-plus.js
+          node --check assets/navigation-phase1.js
           node --check data/enterprise-architecture.js
           node --check data/flutter-mcq.js
           node --check data/security-mcq.js
