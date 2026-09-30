@@ -48,10 +48,6 @@ test.describe('Phase 1 information architecture', () => {
 
   test('More menu preserves print, backup, restore, reset and CSV access', async ({ page }) => {
     await fresh(page);
-    await page.evaluate(() => {
-      window.__phase1Printed = false;
-      window.print = () => { window.__phase1Printed = true; };
-    });
 
     await page.locator('#phase1MoreBtn').click();
     await expect(page.locator('[data-action="print"]')).toBeVisible();
@@ -62,7 +58,9 @@ test.describe('Phase 1 information architecture', () => {
     await expect(page.locator('[data-action="install"]')).toBeHidden();
 
     await page.locator('[data-action="print"]').click();
-    expect(await page.evaluate(() => window.__phase1Printed)).toBe(true);
+    await expect(page.locator('#phase6PrintModal')).toHaveClass(/show/);
+    await expect(page.locator('input[name="phase6-content"][value="questions"]')).toBeChecked();
+    await page.locator('#phase6PrintCancel').click();
 
     await page.locator('#phase1MoreBtn').click();
     const downloadPromise = page.waitForEvent('download');
