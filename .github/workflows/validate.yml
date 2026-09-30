@@ -23,6 +23,7 @@ jobs:
           node --check assets/navigation-phase1.js
           node --check assets/study-phase2.js
           node --check assets/question-card-phase3.js
+          node --check assets/quiz-phase4.js
           node --check data/enterprise-architecture.js
           node --check data/flutter-mcq.js
           node --check data/security-mcq.js

@@ -182,4 +182,11 @@
     closeAllMenus,
     decorateAll:() => questions.forEach(decorateQuestion)
   };
+
+  if (!document.querySelector('script[data-phase4-loader]')) {
+    const phase4Script = document.createElement('script');
+    phase4Script.src = '../assets/quiz-phase4.js';
+    phase4Script.dataset.phase4Loader = 'true';
+    document.body.appendChild(phase4Script);
+  }
 })();
