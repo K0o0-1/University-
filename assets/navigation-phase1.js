@@ -56,6 +56,9 @@
       .phase1-menu-wrap{position:static}
       .phase1-menu-panel{position:absolute;top:calc(100% + 6px);inset-inline:10px;min-width:0;max-width:none}
       .phase1-menu-panel button{font-size:.92rem}
+      body.phase1-navigation-enabled .q .qhead{flex-wrap:wrap}
+      body.phase1-navigation-enabled .q .qt{min-width:0;overflow-wrap:anywhere}
+      body.phase1-navigation-enabled .q .qactions{max-width:100%;flex-wrap:wrap;margin-inline-start:auto}
     }
     @media(min-width:761px){
       .phase1-primary-nav{max-width:620px}
