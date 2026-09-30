@@ -10,9 +10,10 @@
   const style = document.createElement('style');
   style.id = 'uiHotfixReviewMenuStyles';
   style.textContent = `
-    body.phase1-navigation-enabled .phase1-menu-panel.hotfix-popover{
+    body.phase1-navigation-enabled .phase1-menu-panel:popover-open{
       position:fixed!important;
       inset:auto!important;
+      margin:0!important;
       z-index:1000!important;
       display:grid!important;
       gap:3px;
@@ -28,10 +29,14 @@
     document.getElementById('phase1More')
   ].filter(Boolean);
 
+  menuWraps.forEach(wrap => {
+    wrap.querySelector('.phase1-menu-panel')?.setAttribute('popover','manual');
+  });
+
   function positionMenu(wrap){
     if (!wrap?.classList.contains('open')) return;
     const trigger = wrap.querySelector('.phase1-menu-trigger');
-    const panel = document.body.querySelector(`.phase1-menu-panel[data-hotfix-owner="${wrap.id}"]`) || wrap.querySelector('.phase1-menu-panel');
+    const panel = wrap.querySelector('.phase1-menu-panel');
     if (!trigger || !panel) return;
 
     const pad = 10;
@@ -54,30 +59,32 @@
     panel.style.setProperty('top', `${top}px`, 'important');
   }
 
-  function restorePanel(wrap,panel){
-    if (panel.parentNode !== wrap) wrap.appendChild(panel);
-    panel.classList.remove('hotfix-popover');
-    delete panel.dataset.hotfixOwner;
-    ['display','width','left','right','top','bottom'].forEach(prop => panel.style.removeProperty(prop));
+  function clearPanelPosition(panel){
+    ['width','left','right','top','bottom'].forEach(prop => panel.style.removeProperty(prop));
   }
 
-  function syncMenuPortal(wrap){
-    const panel = document.body.querySelector(`.phase1-menu-panel[data-hotfix-owner="${wrap.id}"]`) || wrap.querySelector('.phase1-menu-panel');
+  function syncMenuPopover(wrap){
+    const panel = wrap.querySelector('.phase1-menu-panel');
     if (!panel) return;
+    const isOpen = wrap.classList.contains('open');
+    const inTopLayer = panel.matches(':popover-open');
 
-    if (wrap.classList.contains('open')) {
-      panel.dataset.hotfixOwner = wrap.id;
-      panel.classList.add('hotfix-popover');
-      if (panel.parentNode !== document.body) document.body.appendChild(panel);
+    if (isOpen) {
+      if (!inTopLayer && typeof panel.showPopover === 'function') {
+        try { panel.showPopover(); } catch (_) {}
+      }
       positionMenu(wrap);
     } else {
-      restorePanel(wrap,panel);
+      if (inTopLayer && typeof panel.hidePopover === 'function') {
+        try { panel.hidePopover(); } catch (_) {}
+      }
+      clearPanelPosition(panel);
     }
   }
 
   menuWraps.forEach(wrap => {
-    new MutationObserver(() => syncMenuPortal(wrap)).observe(wrap,{attributes:true,attributeFilter:['class']});
-    wrap.querySelector('.phase1-menu-trigger')?.addEventListener('click', () => queueMicrotask(() => syncMenuPortal(wrap)));
+    new MutationObserver(() => syncMenuPopover(wrap)).observe(wrap,{attributes:true,attributeFilter:['class']});
+    wrap.querySelector('.phase1-menu-trigger')?.addEventListener('click', () => queueMicrotask(() => syncMenuPopover(wrap)));
   });
 
   function repositionOpenMenus(){
@@ -87,9 +94,9 @@
   }
   window.addEventListener('resize', repositionOpenMenus);
   window.addEventListener('scroll', repositionOpenMenus, {passive:true});
-  document.addEventListener('click', () => queueMicrotask(() => menuWraps.forEach(syncMenuPortal)));
+  document.addEventListener('click', () => queueMicrotask(() => menuWraps.forEach(syncMenuPopover)));
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') queueMicrotask(() => menuWraps.forEach(syncMenuPortal));
+    if (event.key === 'Escape') queueMicrotask(() => menuWraps.forEach(syncMenuPopover));
   });
 
   const state = engine.state || {};
