@@ -205,5 +205,11 @@
   const phase2Script = document.createElement('script');
   phase2Script.src = '../assets/study-phase2.js';
   phase2Script.dataset.phase2Loader = 'true';
+  phase2Script.addEventListener('load',() => {
+    const phase3Script = document.createElement('script');
+    phase3Script.src = '../assets/question-card-phase3.js';
+    phase3Script.dataset.phase3Loader = 'true';
+    document.body.appendChild(phase3Script);
+  });
   document.body.appendChild(phase2Script);
 })();
