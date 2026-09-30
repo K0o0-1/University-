@@ -21,11 +21,11 @@ jobs:
           node --check assets/study-v2.js
           node --check assets/study-plus.js
           node --check assets/navigation-phase1.js
+          node --check assets/study-ui-loader.js
           node --check assets/study-phase2.js
           node --check assets/question-card-phase3.js
           node --check assets/quiz-phase4.js
           node --check assets/analytics-phase5.js
-          node --check assets/analytics-phase5-core.js
           node --check assets/print-phase6.js
           node --check data/enterprise-architecture.js
           node --check data/flutter-mcq.js

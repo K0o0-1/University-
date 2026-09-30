@@ -182,22 +182,4 @@
     closeAllMenus,
     decorateAll:() => questions.forEach(decorateQuestion)
   };
-
-  const loadPhase5 = () => {
-    if (document.querySelector('script[data-phase5-loader]')) return;
-    const phase5Script = document.createElement('script');
-    phase5Script.src = '../assets/analytics-phase5.js';
-    phase5Script.dataset.phase5Loader = 'true';
-    document.body.appendChild(phase5Script);
-  };
-
-  if (!document.querySelector('script[data-phase4-loader]')) {
-    const phase4Script = document.createElement('script');
-    phase4Script.src = '../assets/quiz-phase4.js';
-    phase4Script.dataset.phase4Loader = 'true';
-    phase4Script.addEventListener('load',loadPhase5,{once:true});
-    document.body.appendChild(phase4Script);
-  } else {
-    loadPhase5();
-  }
 })();
