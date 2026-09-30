@@ -10,20 +10,59 @@
   const style = document.createElement('style');
   style.id = 'uiHotfixReviewMenuStyles';
   style.textContent = `
-    body.phase1-navigation-enabled header{
-      position:relative;
-      z-index:250
-    }
-    body.phase1-navigation-enabled .phase1-secondary-row{position:relative;z-index:260}
-    body.phase1-navigation-enabled .phase1-menu-wrap.open{z-index:270}
-    body.phase1-navigation-enabled .phase1-menu-panel{z-index:280!important}
-    @media(max-width:760px){
-      body.phase1-navigation-enabled .phase1-secondary-row{z-index:270}
-      body.phase1-navigation-enabled .phase1-menu-wrap.open{z-index:280}
-      body.phase1-navigation-enabled .phase1-menu-panel{z-index:290!important}
+    body.phase1-navigation-enabled .phase1-menu-panel.hotfix-popover{
+      position:fixed!important;
+      inset:auto!important;
+      z-index:650!important;
+      max-width:calc(100vw - 20px)!important;
+      max-height:calc(100vh - 20px)!important;
+      overflow:auto
     }
   `;
   document.head.appendChild(style);
+
+  function positionMenu(wrap){
+    if (!wrap?.classList.contains('open')) return;
+    const trigger = wrap.querySelector('.phase1-menu-trigger');
+    const panel = wrap.querySelector('.phase1-menu-panel');
+    if (!trigger || !panel) return;
+
+    panel.classList.add('hotfix-popover');
+    const pad = 10;
+    const width = Math.min(320, Math.max(235, window.innerWidth - pad * 2));
+    panel.style.setProperty('width', `${width}px`, 'important');
+    panel.style.setProperty('right', 'auto', 'important');
+    panel.style.setProperty('bottom', 'auto', 'important');
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const rtl = getComputedStyle(document.documentElement).direction === 'rtl';
+    let left = rtl ? triggerRect.right - width : triggerRect.left;
+    left = Math.max(pad, Math.min(left, window.innerWidth - width - pad));
+    panel.style.setProperty('left', `${left}px`, 'important');
+
+    const height = Math.min(panel.scrollHeight || 260, window.innerHeight - pad * 2);
+    let top = triggerRect.bottom + 8;
+    if (top + height > window.innerHeight - pad) {
+      top = Math.max(pad, triggerRect.top - height - 8);
+    }
+    panel.style.setProperty('top', `${top}px`, 'important');
+  }
+
+  const menuWraps = [
+    document.getElementById('phase1StudyTools'),
+    document.getElementById('phase1More')
+  ].filter(Boolean);
+
+  menuWraps.forEach(wrap => {
+    const trigger = wrap.querySelector('.phase1-menu-trigger');
+    trigger?.addEventListener('click', () => requestAnimationFrame(() => positionMenu(wrap)));
+  });
+
+  function repositionOpenMenus(){
+    menuWraps.forEach(positionMenu);
+  }
+  window.addEventListener('resize', repositionOpenMenus);
+  window.addEventListener('scroll', repositionOpenMenus, {passive:true});
 
   const state = engine.state || {};
   state.reviewFlags = state.reviewFlags || {};
@@ -94,6 +133,7 @@
 
   window.StudyHotfixes = Object.freeze({
     ready:true,
-    applyReviewVisibility
+    applyReviewVisibility,
+    repositionOpenMenus
   });
 })();
