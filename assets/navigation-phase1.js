@@ -201,4 +201,9 @@
   if (originalFinished) studyV2.onQuizFinished = result => { const out = originalFinished(result); setPrimaryMode('review'); return out; };
 
   setPrimaryMode('study');
+
+  const phase2Script = document.createElement('script');
+  phase2Script.src = '../assets/study-phase2.js';
+  phase2Script.dataset.phase2Loader = 'true';
+  document.body.appendChild(phase2Script);
 })();
