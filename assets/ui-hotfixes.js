@@ -13,7 +13,9 @@
     body.phase1-navigation-enabled .phase1-menu-panel.hotfix-popover{
       position:fixed!important;
       inset:auto!important;
-      z-index:650!important;
+      z-index:1000!important;
+      display:grid!important;
+      gap:3px;
       max-width:calc(100vw - 20px)!important;
       max-height:calc(100vh - 20px)!important;
       overflow:auto
@@ -21,13 +23,17 @@
   `;
   document.head.appendChild(style);
 
+  const menuWraps = [
+    document.getElementById('phase1StudyTools'),
+    document.getElementById('phase1More')
+  ].filter(Boolean);
+
   function positionMenu(wrap){
     if (!wrap?.classList.contains('open')) return;
     const trigger = wrap.querySelector('.phase1-menu-trigger');
-    const panel = wrap.querySelector('.phase1-menu-panel');
+    const panel = document.body.querySelector(`.phase1-menu-panel[data-hotfix-owner="${wrap.id}"]`) || wrap.querySelector('.phase1-menu-panel');
     if (!trigger || !panel) return;
 
-    panel.classList.add('hotfix-popover');
     const pad = 10;
     const width = Math.min(320, Math.max(235, window.innerWidth - pad * 2));
     panel.style.setProperty('width', `${width}px`, 'important');
@@ -48,21 +54,43 @@
     panel.style.setProperty('top', `${top}px`, 'important');
   }
 
-  const menuWraps = [
-    document.getElementById('phase1StudyTools'),
-    document.getElementById('phase1More')
-  ].filter(Boolean);
+  function restorePanel(wrap,panel){
+    if (panel.parentNode !== wrap) wrap.appendChild(panel);
+    panel.classList.remove('hotfix-popover');
+    delete panel.dataset.hotfixOwner;
+    ['display','width','left','right','top','bottom'].forEach(prop => panel.style.removeProperty(prop));
+  }
+
+  function syncMenuPortal(wrap){
+    const panel = document.body.querySelector(`.phase1-menu-panel[data-hotfix-owner="${wrap.id}"]`) || wrap.querySelector('.phase1-menu-panel');
+    if (!panel) return;
+
+    if (wrap.classList.contains('open')) {
+      panel.dataset.hotfixOwner = wrap.id;
+      panel.classList.add('hotfix-popover');
+      if (panel.parentNode !== document.body) document.body.appendChild(panel);
+      positionMenu(wrap);
+    } else {
+      restorePanel(wrap,panel);
+    }
+  }
 
   menuWraps.forEach(wrap => {
-    const trigger = wrap.querySelector('.phase1-menu-trigger');
-    trigger?.addEventListener('click', () => requestAnimationFrame(() => positionMenu(wrap)));
+    new MutationObserver(() => syncMenuPortal(wrap)).observe(wrap,{attributes:true,attributeFilter:['class']});
+    wrap.querySelector('.phase1-menu-trigger')?.addEventListener('click', () => queueMicrotask(() => syncMenuPortal(wrap)));
   });
 
   function repositionOpenMenus(){
-    menuWraps.forEach(positionMenu);
+    menuWraps.forEach(wrap => {
+      if (wrap.classList.contains('open')) positionMenu(wrap);
+    });
   }
   window.addEventListener('resize', repositionOpenMenus);
   window.addEventListener('scroll', repositionOpenMenus, {passive:true});
+  document.addEventListener('click', () => queueMicrotask(() => menuWraps.forEach(syncMenuPortal)));
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') queueMicrotask(() => menuWraps.forEach(syncMenuPortal));
+  });
 
   const state = engine.state || {};
   state.reviewFlags = state.reviewFlags || {};
