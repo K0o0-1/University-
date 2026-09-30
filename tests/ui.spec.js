@@ -258,6 +258,7 @@ test.describe('Quiz Plus 8', () => {
     await fresh(page);
     await startSetup(page, {mode:'practice', section:'sec1', count:'10'});
     const card = await chooseWrong(page);
+    await card.locator('.phase3-more-trigger').click();
     await card.locator('.btn-qstats').click();
     await expect(page.locator('#questionStatsModal')).toHaveClass(/show/);
     await expect(page.locator('#questionStatsContent')).toContainText('المحاولات');
