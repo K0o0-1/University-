@@ -114,7 +114,7 @@ test.describe('Phase 1 information architecture', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await fresh(page);
     const primary = page.locator('#phase1PrimaryNav');
-    await expect(primary.locator('> button')).toHaveCount(4);
+    await expect(page.locator('#phase1PrimaryNav > button')).toHaveCount(4);
     expect(await primary.evaluate(el => getComputedStyle(el).position)).not.toBe('fixed');
     await expect(page.locator('#phase1StudyToolsBtn')).toBeVisible();
     await expect(page.locator('#phase1MoreBtn')).toBeVisible();
