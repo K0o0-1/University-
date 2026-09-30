@@ -43,7 +43,6 @@
     .phase1-menu-wrap.open>.phase1-menu-panel{display:grid;gap:3px}
     .phase1-menu-panel button{width:100%;min-height:42px;margin:0;padding:9px 11px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:var(--ink)!important;text-align:start;font-family:inherit;font-weight:700;box-shadow:none!important}
     .phase1-menu-panel button:hover,.phase1-menu-panel button:focus-visible{background:var(--soft)!important}
-    .phase1-menu-panel .phase1-menu-divider{height:1px;background:var(--line);margin:4px 3px}
     .phase1-quiz-tools{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
     .phase1-quiz-tools:empty{display:none}
     .phase1-legacy-controls{display:none!important}
@@ -53,9 +52,9 @@
       .phase1-primary-nav{position:fixed;z-index:110;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:7px max(7px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(7px,env(safe-area-inset-left));background:var(--card);border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(15,23,42,.14)}
       .phase1-primary-nav button{min-width:0;min-height:50px;padding:6px 3px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:var(--muted)!important;font-size:.78rem;line-height:1.25;white-space:normal}
       .phase1-primary-nav button.active{background:var(--soft)!important;color:var(--brand)!important}
-      .phase1-secondary-row{width:100%}
+      .phase1-secondary-row{position:relative;width:100%}
       .phase1-menu-wrap{position:static}
-      .phase1-menu-panel{position:absolute;inset-inline:10px;top:auto;min-width:0;max-width:none}
+      .phase1-menu-panel{position:absolute;top:calc(100% + 6px);inset-inline:10px;min-width:0;max-width:none}
       .phase1-menu-panel button{font-size:.92rem}
     }
     @media(min-width:761px){
@@ -162,6 +161,10 @@
       menu.trigger.setAttribute('aria-expanded','false');
     });
   }
+
+  more.panel.addEventListener('click', e => {
+    if (e.target.closest('button')) setTimeout(closeMenus,0);
+  });
 
   function setPrimaryMode(mode){
     [studyBtn,quizBtn,flashBtn].forEach(btn => btn.classList.remove('active'));
