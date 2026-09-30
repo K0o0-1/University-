@@ -15,6 +15,7 @@ async function fresh(page, url = EA) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.waitForSelector('main .q');
+  await page.waitForFunction(() => document.body.classList.contains('phase2-study-enabled'));
 }
 
 async function visibleNumbers(page) {
@@ -35,6 +36,7 @@ async function seedWrongCounts(page, values) {
   }, { ids, values });
   await page.reload();
   await page.waitForSelector('main .q');
+  await page.waitForFunction(() => document.body.classList.contains('phase2-study-enabled'));
 }
 
 async function chooseWrongOnFirstVisible(page) {
@@ -56,15 +58,35 @@ async function startPractice(page, {source='filtered', section='', count='all'} 
   await page.locator('#quizSetupStart').click();
 }
 
+async function chooseStudySection(page, value) {
+  await page.locator('#phase2SectionsBtn').click();
+  await expect(page.locator('#phase2SectionsSheet')).toHaveClass(/show/);
+  await page.locator(`.phase2-section-item[data-section-value="${value}"]`).click();
+}
+
+async function openStudyFilters(page) {
+  await page.locator('#phase2FilterBtn').click();
+  await expect(page.locator('#phase2FilterSheet')).toHaveClass(/show/);
+}
+
 test.describe('full regression suite', () => {
   test('all material pages keep filters, sort, floating stop and Phase 1 navigation', async ({ page }) => {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     for (const path of PAGES) {
       await fresh(page, BASE + path);
+      await expect(page.locator('#filterBy')).toHaveCount(1);
+      await expect(page.locator('#sortBy')).toHaveCount(1);
+      await expect(page.locator('#secFilter')).toHaveCount(1);
+      await expect(page.locator('#filterBy')).toBeHidden();
+      await expect(page.locator('#sortBy')).toBeHidden();
+      await expect(page.locator('#secFilter')).toBeHidden();
+      await expect(page.locator('#phase2FilterBtn')).toBeVisible();
+      await expect(page.locator('#phase2SectionsBtn')).toBeVisible();
+      await openStudyFilters(page);
       await expect(page.locator('#filterBy')).toBeVisible();
       await expect(page.locator('#sortBy')).toBeVisible();
-      await expect(page.locator('#secFilter')).toBeVisible();
+      await page.locator('#phase2FilterSheet .phase2-sheet-close').click();
       await expect(page.locator('#stopQuizFloatBtn')).toHaveCount(1);
       await expect(page.locator('#phase1PrimaryNav > button')).toHaveCount(4);
       await expect(page.locator('[data-action="mode-study"]')).toBeVisible();
@@ -85,7 +107,8 @@ test.describe('full regression suite', () => {
     expect(labels).toContain('6. من الشرح — 31 – 60');
     expect(labels).toContain('7. من الشرح — 61 – 73');
     expect(labels).toContain('8. الجزء الثاني — 174 – 275');
-    await page.selectOption('#secFilter', 'sec5');
+    await chooseStudySection(page, 'sec5');
+    await expect(page.locator('#secFilter')).toHaveValue('sec5');
     const nums = await visibleNumbers(page);
     expect(nums).toHaveLength(30);
     expect(nums[0]).toBe(101);
@@ -95,6 +118,7 @@ test.describe('full regression suite', () => {
   test('error filter shows errors only and sorting works descending and ascending', async ({ page }) => {
     await fresh(page);
     await seedWrongCounts(page, [[3, 2], [10, 5], [20, 1]]);
+    await openStudyFilters(page);
     await page.selectOption('#filterBy', 'wrong');
     expect(await visibleNumbers(page)).toEqual([3, 10, 20]);
     await page.selectOption('#sortBy', 'wrong-desc');
@@ -107,12 +131,14 @@ test.describe('full regression suite', () => {
 
   test('current-filter Practice scope stays fixed and stop counts attempted only', async ({ page }) => {
     await fresh(page);
-    await page.selectOption('#secFilter', 'sec8');
+    await chooseStudySection(page, 'sec8');
     expect((await visibleNumbers(page)).length).toBe(102);
     await startPractice(page, {source:'filtered'});
     await expect(page.locator('#statProgress')).toHaveText('0/102');
     await expect(page.locator('#secFilter')).toBeDisabled();
     await expect(page.locator('#filterBy')).toBeDisabled();
+    await expect(page.locator('#phase2SectionsBtn')).toBeDisabled();
+    await expect(page.locator('#phase2FilterBtn')).toBeDisabled();
     await expect(page.locator('#stopQuizFloatBtn')).toBeVisible();
     await chooseWrongOnFirstVisible(page);
     await page.evaluate(() => window.scrollTo(0, 1500));
