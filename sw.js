@@ -1,4 +1,4 @@
-const CACHE = 'university-study-v9';
+const CACHE = 'university-study-v10';
 const CORE = [
   './',
   './index.html',
@@ -12,6 +12,8 @@ const CORE = [
   './assets/question-card-phase3.js',
   './assets/quiz-phase4.js',
   './assets/analytics-phase5.js',
+  './assets/analytics-phase5-core.js',
+  './assets/print-phase6.js',
   './manifest.webmanifest',
   './assets/pwa-icon.svg'
 ];
