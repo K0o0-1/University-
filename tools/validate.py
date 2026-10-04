@@ -85,10 +85,17 @@ def validate_material(path):
         range_match = re.fullmatch(r'(\d+)\s*[–—-]\s*(\d+)', badge)
         if range_match:
             start, end = map(int, range_match.groups())
-            if (start, end) != (expected_start, expected_end):
+            if start > end:
+                fail(f'{path.relative_to(ROOT)}: section {sec_index} badge {badge!r} is reversed')
+            elif end - start + 1 != len(sec_qs):
                 fail(
                     f'{path.relative_to(ROOT)}: section {sec_index} badge {badge!r} '
-                    f'does not match actual range {expected_start}–{expected_end}'
+                    f'covers {end-start+1} items but section contains {len(sec_qs)} questions'
+                )
+            elif (start, end) != (expected_start, expected_end):
+                warn(
+                    f'{path.relative_to(ROOT)}: section {sec_index} badge {badge!r} is a local/source range; '
+                    f'global question positions are {expected_start}–{expected_end}'
                 )
         running = expected_end
 
@@ -158,7 +165,7 @@ for rel, count in expected.items():
         fail(f'{rel}: initial progress counter is not 0/{count}')
 
 loader = (ROOT / 'assets' / 'study-ui-loader.js').read_text(encoding='utf-8')
-if "project-fixes.js" not in loader:
+if 'project-fixes.js' not in loader:
     fail('study-ui-loader.js must load project-fixes.js after the UI modules')
 
 sw = (ROOT / 'sw.js').read_text(encoding='utf-8')
@@ -189,4 +196,4 @@ if errors:
         print('ERROR', error)
     sys.exit(1)
 
-print('Validation passed: data counts, answer indexes, section ranges, file references, page counters, PWA precache and required UI modules are consistent.')
+print('Validation passed: data counts, answer indexes, section range lengths, file references, page counters, PWA precache and required UI modules are consistent.')
