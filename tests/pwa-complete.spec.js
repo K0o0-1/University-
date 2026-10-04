@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:4173';
+const CACHE = 'university-study-v14';
 const MATERIALS = [
   ['/materials/enterprise-architecture.html',275],
   ['/materials/mcq-flutter.html',341],
@@ -9,24 +10,24 @@ const MATERIALS = [
 ];
 
 test('home-page registration precaches the complete library for first-session offline use', async ({ page, context }) => {
-  await page.goto(`${BASE}/`);
+  await page.goto(`${BASE}/`, {waitUntil:'domcontentloaded'});
   await page.evaluate(async () => {
     if (!('serviceWorker' in navigator)) throw new Error('Service Worker API unavailable');
     await navigator.serviceWorker.ready;
-    if (!navigator.serviceWorker.controller) {
-      await new Promise((resolve,reject) => {
-        const timer = setTimeout(() => reject(new Error('Service worker did not take control')),10000);
-        navigator.serviceWorker.addEventListener('controllerchange',() => {
-          clearTimeout(timer);
-          resolve();
-        },{once:true});
-        location.reload();
-      });
-    }
-  }).catch(() => {});
-  await page.reload();
+  });
+
+  if (!(await page.evaluate(() => !!navigator.serviceWorker.controller))) {
+    await page.reload({waitUntil:'domcontentloaded'});
+  }
   await page.waitForFunction(() => !!navigator.serviceWorker?.controller);
-  await page.waitForTimeout(800);
+
+  await page.waitForFunction(async ({cacheName,paths}) => {
+    const names = await caches.keys();
+    if (!names.includes(cacheName)) return false;
+    const cache = await caches.open(cacheName);
+    const hits = await Promise.all(paths.map(path => cache.match(new URL(path, location.origin + '/'))));
+    return hits.every(Boolean);
+  }, {cacheName:CACHE,paths:MATERIALS.map(([path]) => path)});
 
   await context.setOffline(true);
   try {
