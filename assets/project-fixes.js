@@ -35,6 +35,10 @@
     /* Hidden compatibility controls must never enter keyboard focus order. */
     body.project-fixes-enabled .phase4-native-bridge{pointer-events:none!important}
 
+    /* Keep answered accuracy useful without turning the result grid into ten cards. */
+    .project-result-accuracy{grid-column:1/-1;padding:7px 10px;border:1px dashed var(--line);border-radius:10px;background:var(--soft);color:var(--muted);text-align:center;font-size:.82rem}
+    .project-result-accuracy b{color:var(--ink);margin-inline-start:4px}
+
     /* Keep the print setup above navigation popovers in Chromium, Firefox and WebKit. */
     #phase6PrintModal:popover-open{border:0!important;margin:0!important}
   `;
@@ -123,9 +127,9 @@
       let accuracy = metrics.querySelector('[data-project-accuracy]');
       if (!accuracy) {
         accuracy = document.createElement('div');
-        accuracy.className = 'result-metric';
+        accuracy.className = 'project-result-accuracy';
         accuracy.dataset.projectAccuracy = 'true';
-        accuracy.innerHTML = '<span>دقة المجاب</span><b></b>';
+        accuracy.innerHTML = '<span>دقة المجاب</span>: <b></b>';
         metrics.appendChild(accuracy);
       }
       accuracy.querySelector('b').textContent = `${result.accuracy}%`;
