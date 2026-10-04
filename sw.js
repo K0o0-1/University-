@@ -1,7 +1,9 @@
-const CACHE = 'university-study-v13';
+const CACHE = 'university-study-v14';
 const CORE = [
   './',
   './index.html',
+  './manifest.webmanifest',
+  './assets/pwa-icon.svg',
   './assets/styles.css',
   './assets/mcq-engine.js',
   './assets/qa-engine.js',
@@ -15,12 +17,19 @@ const CORE = [
   './assets/analytics-phase5.js',
   './assets/print-phase6.js',
   './assets/ui-hotfixes.js',
-  './manifest.webmanifest',
-  './assets/pwa-icon.svg'
+  './assets/project-fixes.js',
+  './materials/enterprise-architecture.html',
+  './materials/mcq-flutter.html',
+  './materials/mcq-information-security-privacy.html',
+  './materials/qa-information-security-privacy.html',
+  './data/enterprise-architecture.js',
+  './data/flutter-mcq.js',
+  './data/security-mcq.js',
+  './data/security-qa.js'
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).catch(() => {}));
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)));
   self.skipWaiting();
 });
 
@@ -42,6 +51,6 @@ self.addEventListener('fetch', event => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => caches.match(event.request).then(hit => hit || caches.match('./index.html')))
   );
 });
