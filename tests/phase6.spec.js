@@ -87,16 +87,53 @@ test.describe('Phase 6 Professional Print', () => {
     await expect(page.locator('#phase6PrintDocument .phase6-print-index')).toHaveCount(0);
   });
 
-  test('Q&A supports questions-only and questions+answers with an explicit Answer block', async ({ page }) => {
+  test('Q&A supports questions-only and questions+answers without printing an Answer label', async ({ page }) => {
     await fresh(page, QA);
     await expect(page.locator('input[name="phase6-content"][value="key"]')).toHaveCount(0);
+    const firstAnswer = await page.evaluate(() => window.StudyEngine.allQuestions()[0].a);
     const count = await page.evaluate(() => window.StudyEngine.allQuestions().length);
     await page.evaluate(() => window.StudyPhase6.prepare({content:'questions', scope:'all'}));
     await expect(page.locator('#phase6PrintDocument .phase6-question')).toHaveCount(count);
     await expect(page.locator('#phase6PrintDocument .phase6-qa-answer')).toHaveCount(0);
     await page.evaluate(() => window.StudyPhase6.prepare({content:'answers', scope:'all'}));
     await expect(page.locator('#phase6PrintDocument .phase6-qa-answer')).toHaveCount(count);
-    await expect(page.locator('#phase6PrintDocument .phase6-qa-answer').first()).toContainText('Answer');
+    await expect(page.locator('#phase6PrintDocument .phase6-qa-answer').first()).toContainText(firstAnswer);
+    await expect(page.locator('#phase6PrintDocument .phase6-qa-answer').first()).not.toContainText('Answer');
+  });
+
+  test('Q&A print index is one vertical linked list with no duplicate numbering and footer links to WhatsApp', async ({ page }) => {
+    await fresh(page, QA);
+    await page.evaluate(() => window.StudyPhase6.prepare({content:'answers', scope:'all'}));
+
+    const index = page.locator('#phase6PrintDocument .phase6-print-index');
+    await expect(index).toHaveCount(1);
+    await expect(index.locator('ol')).toHaveCount(0);
+    await expect(index.locator('ul')).toHaveCount(1);
+    await expect(index.locator('li')).toHaveCount(6);
+    await expect(index.locator('a')).toHaveCount(6);
+
+    const firstLink = index.locator('a').first();
+    await expect(firstLink).toHaveText('1. أمن المعلومات والخصوصية — 1 – 17');
+    await expect(firstLink).toHaveAttribute('href', '#phase6-section-sec1');
+    await expect(page.locator('#phase6-section-sec1')).toHaveCount(1);
+    await expect(page.locator('#phase6-section-sec6')).toHaveCount(1);
+
+    const indexTexts = await index.locator('a').allTextContents();
+    expect(indexTexts.join(' ')).not.toContain('(17)');
+    expect(indexTexts.join(' ')).not.toMatch(/1\.\s*1\./);
+
+    await page.evaluate(() => document.querySelector('#phase6PrintDocument .phase6-print-index a').click());
+    await expect(page).toHaveURL(/#phase6-section-sec1$/);
+
+    await page.evaluate(() => document.body.classList.add('phase6-printing'));
+    await page.emulateMedia({media:'print'});
+    const columns = await index.locator('ul').evaluate(el => getComputedStyle(el).columnCount);
+    expect(columns).toBe('1');
+
+    const footerLink = page.locator('#phase6PrintDocument .phase6-print-footer a');
+    await expect(footerLink).toHaveText('Eng. Khalid Al-sofi');
+    await expect(footerLink).toHaveAttribute('href', 'https://wa.me/967771179020');
+    await page.emulateMedia({media:'screen'});
   });
 
   test('A4 print media hides the application UI, avoids card splits, and generates valid PDFs for MCQ and Q&A', async ({ page }) => {
