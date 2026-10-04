@@ -136,6 +136,25 @@
     }
   }
 
+  function revealExamReview(result){
+    if (kind !== 'mcq' || result.mode !== 'exam') return;
+    const answers = result.answers && typeof result.answers === 'object' ? result.answers : {};
+    (result.scopeIds || []).forEach(id => {
+      if (!Object.prototype.hasOwnProperty.call(answers,id)) return;
+      const q = engine.questionById(id);
+      if (!q?.el) return;
+      const chosen = Number(answers[id]);
+      const correct = Number(q.a);
+      q.el.classList.add('quiz-mode','answered');
+      q.el.querySelectorAll('ol.o li').forEach(option => {
+        const index = Number(option.dataset.idx);
+        option.classList.remove('exam-choice','wrong');
+        option.classList.toggle('correct',index === correct);
+        if (index === chosen && chosen !== correct) option.classList.add('wrong');
+      });
+    });
+  }
+
   function renderSafeReview(result){
     const review = document.getElementById('qrReview');
     if (!review) return;
@@ -179,6 +198,7 @@
     const wrapped = result => {
       normalizedResult(result);
       original(result);
+      revealExamReview(result);
       updateResultSummary(result);
       renderSafeReview(result);
     };
