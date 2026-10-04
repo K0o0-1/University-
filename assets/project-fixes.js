@@ -34,6 +34,9 @@
 
     /* Hidden compatibility controls must never enter keyboard focus order. */
     body.project-fixes-enabled .phase4-native-bridge{pointer-events:none!important}
+
+    /* Keep the print setup above navigation popovers in Chromium, Firefox and WebKit. */
+    #phase6PrintModal:popover-open{border:0!important;margin:0!important}
   `;
   document.head.appendChild(style);
 
@@ -193,12 +196,29 @@
     },true);
   }
 
+  function promotePrintModalToTopLayer(){
+    const modal = document.getElementById('phase6PrintModal');
+    if (!modal || typeof modal.showPopover !== 'function' || typeof modal.hidePopover !== 'function') return;
+    modal.setAttribute('popover','manual');
+    const sync = () => {
+      const shouldOpen = modal.classList.contains('show');
+      const isOpen = modal.matches(':popover-open');
+      try {
+        if (shouldOpen && !isOpen) modal.showPopover();
+        else if (!shouldOpen && isOpen) modal.hidePopover();
+      } catch (_) {}
+    };
+    new MutationObserver(sync).observe(modal,{attributes:true,attributeFilter:['class']});
+    sync();
+  }
+
   hideLegacyFavoriteUI();
   clarifyLabels();
   removeHiddenControlsFromTabOrder();
   installKeyboardAccess();
   patchQuizResultLifecycle();
   hardenReset();
+  promotePrintModalToTopLayer();
 
   window.ProjectFixes = Object.freeze({
     ready:true,
