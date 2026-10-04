@@ -1,4 +1,4 @@
-const CACHE = 'university-study-v12';
+const CACHE = 'university-study-v13';
 const CORE = [
   './',
   './index.html',
