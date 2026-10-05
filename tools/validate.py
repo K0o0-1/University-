@@ -6,10 +6,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 errors = []
+warnings = []
 
 
 def fail(msg):
     errors.append(msg)
+
+
+def warn(msg):
+    warnings.append(msg)
 
 
 def load_material(path):
@@ -29,10 +34,12 @@ def validate_material(path):
     data = load_material(path)
     if not data:
         return
+
     meta = data.get('meta', {})
     sections = data.get('sections', [])
     questions = [q for sec in sections for q in sec.get('qs', [])]
     declared = meta.get('count')
+
     if declared != len(questions):
         fail(f'{path.relative_to(ROOT)}: meta.count={declared}, actual={len(questions)}')
     if not meta.get('storageKey'):
@@ -48,9 +55,9 @@ def validate_material(path):
             fail(f'{path.relative_to(ROOT)}: question {index} has empty text')
         normalized = re.sub(r'\s+', ' ', question)
         if normalized in seen:
-            # Duplicate wording can be intentional; report as warning only.
-            print(f'WARN {path.relative_to(ROOT)}: duplicate wording near question {index}: {normalized[:80]}')
+            warn(f'{path.relative_to(ROOT)}: duplicate wording near question {index}: {normalized[:80]}')
         seen.add(normalized)
+
         if kind == 'mcq':
             options = q.get('o')
             answer = q.get('a')
@@ -69,9 +76,29 @@ def validate_material(path):
         sec_qs = sec.get('qs', [])
         if not sec.get('title'):
             fail(f'{path.relative_to(ROOT)}: section {sec_index} has empty title')
-        if not sec.get('badge'):
+        badge = str(sec.get('badge', '')).strip()
+        if not badge:
             fail(f'{path.relative_to(ROOT)}: section {sec_index} has empty badge')
-        running += len(sec_qs)
+
+        expected_start = running + 1
+        expected_end = running + len(sec_qs)
+        range_match = re.fullmatch(r'(\d+)\s*[–—-]\s*(\d+)', badge)
+        if range_match:
+            start, end = map(int, range_match.groups())
+            if start > end:
+                fail(f'{path.relative_to(ROOT)}: section {sec_index} badge {badge!r} is reversed')
+            elif end - start + 1 != len(sec_qs):
+                fail(
+                    f'{path.relative_to(ROOT)}: section {sec_index} badge {badge!r} '
+                    f'covers {end-start+1} items but section contains {len(sec_qs)} questions'
+                )
+            elif (start, end) != (expected_start, expected_end):
+                warn(
+                    f'{path.relative_to(ROOT)}: section {sec_index} badge {badge!r} is a local/source range; '
+                    f'global question positions are {expected_start}–{expected_end}'
+                )
+        running = expected_end
+
     if running != len(questions):
         fail(f'{path.relative_to(ROOT)}: section total mismatch')
 
@@ -81,9 +108,19 @@ for data_file in sorted((ROOT / 'data').glob('*.js')):
 
 if (ROOT / 'data' / 'enterprise-architecture-base173.js').exists():
     fail('enterprise-architecture-base173.js should not exist after EA merge')
-
 if (ROOT / 'assets' / 'runtime-fixes.js').exists():
     fail('assets/runtime-fixes.js should not exist after engine refactor')
+
+required_assets = [
+    'assets/study-v2.js',
+    'assets/study-plus.js',
+    'assets/study-ui-loader.js',
+    'assets/print-phase6.js',
+    'assets/project-fixes.js',
+]
+for rel in required_assets:
+    if not (ROOT / rel).exists():
+        fail(f'{rel} is required')
 
 for html_path in (ROOT / 'materials').glob('*.html'):
     page = html_path.read_text(encoding='utf-8')
@@ -92,6 +129,12 @@ for html_path in (ROOT / 'materials').glob('*.html'):
             fail(f'{html_path.relative_to(ROOT)}: missing required UI control {required}')
     if 'runtime-fixes.js' in page:
         fail(f'{html_path.relative_to(ROOT)}: still references runtime-fixes.js')
+    if '../assets/study-v2.js' not in page:
+        fail(f'{html_path.relative_to(ROOT)}: missing study-v2.js')
+    if '../assets/study-plus.js' not in page:
+        fail(f'{html_path.relative_to(ROOT)}: missing study-plus.js')
+    if 'https://wa.me/967771179020' not in page:
+        fail(f'{html_path.relative_to(ROOT)}: author footer is not linked to WhatsApp')
 
 html_files = list((ROOT / 'materials').glob('*.html')) + [ROOT / 'index.html']
 for html_path in html_files:
@@ -121,29 +164,36 @@ for rel, count in expected.items():
     if f'0/{count}' not in text:
         fail(f'{rel}: initial progress counter is not 0/{count}')
 
-if not (ROOT / 'assets' / 'study-v2.js').exists():
-    fail('assets/study-v2.js is required')
-if not (ROOT / 'assets' / 'study-plus.js').exists():
-    fail('assets/study-plus.js is required')
-for html_path in (ROOT / 'materials').glob('*.html'):
-    page = html_path.read_text(encoding='utf-8')
-    if '../assets/study-v2.js' not in page:
-        fail(f'{html_path.relative_to(ROOT)}: missing study-v2.js')
-    if '../assets/study-plus.js' not in page:
-        fail(f'{html_path.relative_to(ROOT)}: missing study-plus.js')
+loader = (ROOT / 'assets' / 'study-ui-loader.js').read_text(encoding='utf-8')
+if 'project-fixes.js' not in loader:
+    fail('study-ui-loader.js must load project-fixes.js after the UI modules')
+
+sw = (ROOT / 'sw.js').read_text(encoding='utf-8')
+for rel in [
+    './assets/project-fixes.js',
+    './materials/enterprise-architecture.html',
+    './materials/mcq-flutter.html',
+    './materials/mcq-information-security-privacy.html',
+    './materials/qa-information-security-privacy.html',
+    './data/enterprise-architecture.js',
+    './data/flutter-mcq.js',
+    './data/security-mcq.js',
+    './data/security-qa.js',
+]:
+    if rel not in sw:
+        fail(f'sw.js: offline precache missing {rel}')
+
+index = (ROOT / 'index.html').read_text(encoding='utf-8')
+if "serviceWorker.register('./sw.js'" not in index:
+    fail('index.html: service worker must register from the library home page')
+
+for message in warnings:
+    print('WARN', message)
 
 if errors:
     print('\nVALIDATION FAILED')
-    for e in errors:
-        print('ERROR', e)
+    for error in errors:
+        print('ERROR', error)
     sys.exit(1)
 
-print('Validation passed: data counts, answer indexes, file references and page counters are consistent.')
-
-if not (ROOT / 'assets' / 'study-v2.js').exists():
-    fail('assets/study-v2.js is required')
-
-for html_path in (ROOT / 'materials').glob('*.html'):
-    page = html_path.read_text(encoding='utf-8')
-    if '../assets/study-v2.js' not in page:
-        fail(f'{html_path.relative_to(ROOT)}: missing study-v2.js')
+print('Validation passed: data counts, answer indexes, section range lengths, file references, page counters, PWA precache and required UI modules are consistent.')

@@ -1,23 +1,35 @@
-# University Study Materials
+# University Study Library
 
-A lightweight web-based study hub for university course materials, built with plain HTML, CSS, and JavaScript and published with GitHub Pages.
+A static, offline-capable study library built with HTML, CSS and JavaScript and published with GitHub Pages.
 
 ## Live Website
 
 https://k0o0-1.github.io/University-/
 
-## Overview
-
-This repository organizes multiple university study resources into one simple website. It includes interactive MCQ pages, question-and-answer materials, and subject-specific study content.
-
-The project does not require a backend, database, or installation. It runs directly in the browser.
-
 ## Included Materials
 
-- Information Systems Security & Privacy — MCQ
-- Information Systems Security & Privacy — Q&A
-- Flutter — MCQ
-- Enterprise Architecture
+- Enterprise Architecture — 275 MCQ
+- Flutter — 341 MCQ
+- Information Systems Security & Privacy — 200 MCQ
+- Information Systems Security & Privacy — 100 Q&A
+
+## Main Features
+
+- Study, Quiz, Cards and Analytics navigation
+- Practice and Exam quiz modes
+- Section, count, source, order and timer controls
+- Per-question review flags
+- Smart mastery and weakness analytics
+- Quiz history and resume support
+- Search, section filtering and error sorting
+- Professional A4/PDF printing
+- Linked vertical print indexes
+- MCQ answer keys
+- Keyboard-accessible question interactions
+- PWA installation and full-library offline precache
+- Local-only progress storage using LocalStorage
+- Backup / restore support
+- Responsive mobile layout
 
 ## Project Structure
 
@@ -30,115 +42,107 @@ University-/
 │   ├── styles.css
 │   ├── mcq-engine.js
 │   ├── qa-engine.js
+│   ├── study-v2.js
+│   ├── study-plus.js
+│   ├── navigation-phase1.js
+│   ├── study-ui-loader.js
+│   ├── study-phase2.js
+│   ├── question-card-phase3.js
+│   ├── quiz-phase4.js
+│   ├── analytics-phase5.js
+│   ├── print-phase6.js
+│   ├── ui-hotfixes.js
+│   ├── project-fixes.js
 │   └── pwa-icon.svg
 ├── data/
-│   ├── security-mcq.js
-│   ├── security-qa.js
+│   ├── enterprise-architecture.js
 │   ├── flutter-mcq.js
-│   └── enterprise-architecture.js
+│   ├── security-mcq.js
+│   └── security-qa.js
 ├── materials/
-│   ├── mcq-information-security-privacy.html
-│   ├── qa-information-security-privacy.html
+│   ├── enterprise-architecture.html
 │   ├── mcq-flutter.html
-│   └── enterprise-architecture.html
+│   ├── mcq-information-security-privacy.html
+│   └── qa-information-security-privacy.html
+├── tests/
+│   ├── ui.spec.js
+│   ├── regression.spec.js
+│   ├── phase1.spec.js ... phase8.spec.js
+│   ├── hotfix-review-menu.spec.js
+│   ├── project-fixes.spec.js
+│   ├── print-all-materials.spec.js
+│   ├── pwa-complete.spec.js
+│   └── cross-browser-smoke.spec.js
 ├── tools/
 │   └── validate.py
-├── .github/workflows/
-│   └── validate.yml
-├── .nojekyll
-└── README.md
+└── .github/workflows/
+    └── validate.yml
 ```
-
-## Features
-
-- Central homepage for all study materials
-- Interactive multiple-choice question pages
-- Question-and-answer study pages
-- Reusable JavaScript engines for MCQ and Q&A content
-- Responsive design for desktop and mobile
-- Static hosting with GitHub Pages
-- No backend or database required
-- Easy to update by editing the HTML or JavaScript data files
-
-## Technologies Used
-
-- HTML5
-- CSS3
-- JavaScript
-- GitHub
-- GitHub Pages
 
 ## Running Locally
 
-You can run the project locally without installing any dependencies.
-
-1. Download or clone the repository.
-2. Open `index.html` in a web browser.
-3. Select the study material you want to open.
-
-Clone command:
+Use a local web server so PWA and Service Worker behavior works correctly:
 
 ```bash
-git clone https://github.com/K0o0-1/University-.git
+python3 -m http.server 4173
 ```
 
 Then open:
 
 ```text
-University-/index.html
+http://127.0.0.1:4173/
 ```
 
+Opening `index.html` directly from `file://` is sufficient for basic study pages, but not for Service Worker / offline testing.
 
-## Updating Study Content
+## Study Data
 
-Study questions and subject data are stored mainly inside the `data/` directory.
+Question-bank content is stored in `data/`. The shared engines render the material pages and store user progress locally in the browser.
 
-For example:
-
-```text
-data/flutter-mcq.js
-data/security-mcq.js
-data/security-qa.js
-data/enterprise-architecture.js
-```
-
-The shared interface and behavior are handled directly by `assets/mcq-engine.js` and `assets/qa-engine.js`.
+Do not edit question-bank content as part of a UI or infrastructure change unless the content change is explicitly reviewed.
 
 ## Validation
 
-The repository includes an automatic validator that checks question counts, answer indexes, referenced files, and initial page counters. Run it locally with:
+Run the static validator:
 
 ```bash
 python3 tools/validate.py
 ```
 
-GitHub Actions also runs the same validation on pushes and pull requests.
+It checks:
 
-## Repository
+- declared and actual question counts
+- MCQ answer indexes
+- required Q&A answers
+- section badge ranges when numeric ranges are used
+- referenced local files
+- initial page counters
+- required UI modules
+- PWA offline precache coverage
+- WhatsApp author links
 
-https://github.com/K0o0-1/University-
+## Browser Tests
 
-## Author
+GitHub Actions runs:
 
-Khalid Al-Sofi
-
----
-
-Built as a personal university study workspace for organizing and reviewing course materials in one place.
-
+- complete Chromium Playwright suite
+- A4/PDF generation checks for all four materials
+- first-session offline-library checks
+- Firefox smoke tests
+- WebKit smoke tests
+- JavaScript syntax validation
 
 ## Development Quality Rule
 
-**Full-project verification rule:** after every important change, test the changed feature first, then run the complete project validation and browser behavior suite before the change is accepted.
+After every important change:
 
-## Quiz & Analytics V2
+1. Test the changed behavior directly.
+2. Run the static validator and JavaScript syntax checks.
+3. Run the complete Chromium Playwright suite.
+4. Run cross-browser smoke tests for sensitive UI behavior.
+5. Do not merge to `main` until all required checks pass.
 
-- Study mode remains the default learning mode.
-- Practice mode provides immediate feedback.
-- Exam mode hides correctness until the end.
-- Custom quizzes support section, question count, current filters, weakness-only scope, and random order.
-- Results include answered/unanswered counts, score, time, and average time per question.
-- The last 20 quiz sessions are stored locally per browser.
-- Per-section statistics, smart mastery levels, and weakness ranking are available.
-- Quiz navigation supports answered state and review flags.
-- A dedicated statistics view summarizes progress, weaknesses, section performance, and quiz history.
+## Author
+
+**Eng. Khalid Al-sofi**  
+WhatsApp: +967 771 179 020

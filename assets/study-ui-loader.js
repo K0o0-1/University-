@@ -32,9 +32,9 @@
     });
   }
 
-  function loadHotfix(file){
+  function loadExtra(file,marker){
     return new Promise((resolve,reject) => {
-      let script = document.querySelector('script[data-study-ui-hotfix]');
+      let script = document.querySelector(`script[${marker}]`);
       if (script) {
         if (script.dataset.loaded === 'true') { resolve(); return; }
         script.addEventListener('load',resolve,{once:true});
@@ -43,7 +43,7 @@
       }
       script = document.createElement('script');
       script.src = base + file;
-      script.dataset.studyUiHotfix = 'true';
+      script.setAttribute(marker,'true');
       script.addEventListener('load',() => {
         script.dataset.loaded = 'true';
         resolve();
@@ -56,7 +56,8 @@
   (async() => {
     try {
       for (const [file,key] of modules) await loadModule(file,key);
-      await loadHotfix('ui-hotfixes.js');
+      await loadExtra('ui-hotfixes.js','data-study-ui-hotfix');
+      await loadExtra('project-fixes.js','data-study-project-fixes');
       document.body.classList.add('phase7-cleanup-enabled');
       window.StudyPhase7 = Object.freeze({
         modules:modules.map(([,key]) => key),

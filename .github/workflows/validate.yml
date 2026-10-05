@@ -11,7 +11,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate data and references
         run: python3 tools/validate.py
       - name: Check JavaScript syntax
@@ -28,6 +28,7 @@ jobs:
           node --check assets/analytics-phase5.js
           node --check assets/print-phase6.js
           node --check assets/ui-hotfixes.js
+          node --check assets/project-fixes.js
           node --check data/enterprise-architecture.js
           node --check data/flutter-mcq.js
           node --check data/security-mcq.js
@@ -38,11 +39,11 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Install Playwright
+      - name: Install Playwright Chromium
         run: |
           npm install --no-save @playwright/test@1.55.0
           npx playwright install --with-deps chromium
@@ -55,7 +56,37 @@ jobs:
           done
           cat /tmp/university-http.log
           exit 1
-      - name: Run complete browser behavior suite
+      - name: Run complete Chromium behavior suite
         env:
           BASE_URL: http://127.0.0.1:4173
         run: npx playwright test tests --workers=1
+
+  cross-browser-smoke:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install Playwright Firefox and WebKit
+        run: |
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps firefox webkit
+      - name: Start local site
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/university-http.log 2>&1 &
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/university-http.log
+          exit 1
+      - name: Firefox smoke test
+        env:
+          BASE_URL: http://127.0.0.1:4173
+        run: npx playwright test tests/cross-browser-smoke.spec.js --browser=firefox --workers=1
+      - name: WebKit smoke test
+        env:
+          BASE_URL: http://127.0.0.1:4173
+        run: npx playwright test tests/cross-browser-smoke.spec.js --browser=webkit --workers=1

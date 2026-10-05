@@ -15,10 +15,14 @@
 
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const letter = index => String.fromCharCode(65 + Number(index || 0));
-  const sectionLabel = secId => {
+  const sectionInfo = secId => {
     const idx = Number(String(secId || '').replace('sec','')) - 1;
     const sec = sections[idx];
-    return sec ? `${idx + 1}. ${sec.title} — ${sec.badge}` : 'القسم الحالي';
+    return sec ? {number:idx + 1,title:sec.title,badge:sec.badge} : {number:'',title:'القسم الحالي',badge:''};
+  };
+  const sectionLabel = secId => {
+    const info = sectionInfo(secId);
+    return info.number ? `${info.number}. ${info.title} — ${info.badge}` : info.title;
   };
 
   const style = document.createElement('style');
@@ -53,10 +57,13 @@
       .phase6-print-title{margin:0;font-size:17pt;line-height:1.25;color:#111}
       .phase6-print-meta{display:flex;flex-wrap:wrap;gap:2mm 5mm;margin-top:2.5mm;color:#444;font-size:8.7pt}
       .phase6-print-index{margin:0 0 7mm;padding:4mm;border:1px solid #bbb;border-radius:2mm;break-inside:avoid-page}
-      .phase6-print-index h2{margin:0 0 2mm;font-size:11pt}
-      .phase6-print-index ol{margin:0;padding-inline-start:6mm;columns:2;column-gap:8mm}
-      .phase6-print-index li{margin:0 0 1.2mm;break-inside:avoid;font-size:8.7pt}
-      .phase6-print-section{margin:0 0 6mm;break-inside:auto}
+      .phase6-print-index h2{margin:0 0 2.5mm;font-size:11pt}
+      .phase6-print-index ul{display:block;margin:0;padding:0;list-style:none;columns:auto!important;column-count:1!important}
+      .phase6-print-index li{display:block;margin:0 0 1.5mm;padding:0;break-inside:avoid;font-size:9pt}
+      .phase6-print-index a{display:block;padding:1.2mm 1.5mm;border-bottom:.5pt solid #ddd;color:#111!important;text-decoration:none!important;line-height:1.5}
+      .phase6-print-index li:last-child a{border-bottom:0}
+      .phase6-print-index a:hover,.phase6-print-index a:focus{text-decoration:underline!important}
+      .phase6-print-section{margin:0 0 6mm;break-inside:auto;scroll-margin-top:8mm}
       .phase6-print-section-title{display:flex;align-items:center;gap:2.5mm;margin:0 0 3mm;padding:2mm 0;border-bottom:1pt solid #555;font-size:11.5pt;font-weight:800;break-after:avoid-page;page-break-after:avoid}
       .phase6-print-section-title small{font-size:8.5pt;font-weight:600;color:#555}
       .phase6-question{margin:0 0 3.4mm;padding:3.2mm;border:1px solid #c7c7c7;border-radius:2mm;background:#fff;break-inside:avoid-page;page-break-inside:avoid}
@@ -69,10 +76,10 @@
       .phase6-option.is-answer{border:1px solid #555;background:#f2f2f2;font-weight:700}
       .phase6-answer-mark{font-weight:900;text-align:center}
       .phase6-qa-answer{margin:2.5mm 0 0;padding:2.5mm 3mm;border-inline-start:3pt solid #555;background:#f3f3f3;break-inside:avoid}
-      .phase6-qa-answer b{display:block;margin-bottom:1mm;font-size:9pt}
       .phase6-answer-key{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2mm;margin-top:2mm}
       .phase6-key-item{padding:2mm;border:1px solid #aaa;border-radius:1.5mm;text-align:center;font-size:9pt;font-weight:800;break-inside:avoid}
       .phase6-print-footer{margin-top:8mm;padding-top:3mm;border-top:1px solid #aaa;text-align:center;font-size:8pt;color:#555;break-inside:avoid}
+      .phase6-print-footer a{color:#444!important;text-decoration:underline!important;text-underline-offset:1.5pt}
       .phase6-print-empty{padding:15mm 0;text-align:center;color:#555}
     }
   `;
@@ -161,8 +168,12 @@
 
   function renderIndex(list){
     const groups = grouped(list);
-    const items = Array.from(groups.entries()).map(([secId,items]) => `<li>${esc(sectionLabel(secId))} <small>(${items.length})</small></li>`).join('');
-    return `<nav class="phase6-print-index"><h2>فهرس الأقسام</h2><ol>${items}</ol></nav>`;
+    const items = Array.from(groups.entries()).map(([secId]) => {
+      const info = sectionInfo(secId);
+      const label = info.number ? `${info.number}. ${info.title} — ${info.badge}` : info.title;
+      return `<li><a href="#phase6-section-${esc(secId)}">${esc(label)}</a></li>`;
+    }).join('');
+    return `<nav class="phase6-print-index" aria-label="فهرس الأقسام"><h2>فهرس الأقسام</h2><ul>${items}</ul></nav>`;
   }
 
   function renderMcqQuestion(q,withAnswer){
@@ -174,7 +185,7 @@
   }
 
   function renderQaQuestion(q,withAnswer){
-    const answer = withAnswer ? `<div class="phase6-qa-answer"><b>Answer</b><div>${esc(q.a)}</div></div>` : '';
+    const answer = withAnswer ? `<div class="phase6-qa-answer"><div>${esc(q.a)}</div></div>` : '';
     return `<article class="phase6-question" data-phase6-qid="${esc(q.id)}"><div class="phase6-qhead"><span class="phase6-qnum">${q.num}</span><p class="phase6-qtext">${esc(q.q)}</p></div>${answer}</article>`;
   }
 
@@ -182,13 +193,13 @@
     const groups = grouped(list);
     return Array.from(groups.entries()).map(([secId,items]) => {
       const body = items.map(q => kind === 'mcq' ? renderMcqQuestion(q,content === 'answers') : renderQaQuestion(q,content === 'answers')).join('');
-      return `<section class="phase6-print-section" data-phase6-section="${esc(secId)}"><h2 class="phase6-print-section-title"><span>${esc(sectionLabel(secId))}</span><small>${items.length} سؤال</small></h2>${body}</section>`;
+      return `<section id="phase6-section-${esc(secId)}" class="phase6-print-section" data-phase6-section="${esc(secId)}"><h2 class="phase6-print-section-title"><span>${esc(sectionLabel(secId))}</span><small>${items.length} سؤال</small></h2>${body}</section>`;
     }).join('');
   }
 
   function renderKey(list){
     const groups = grouped(list);
-    return Array.from(groups.entries()).map(([secId,items]) => `<section class="phase6-print-section" data-phase6-section="${esc(secId)}"><h2 class="phase6-print-section-title"><span>${esc(sectionLabel(secId))}</span><small>${items.length} إجابة</small></h2><div class="phase6-answer-key">${items.map(q => `<div class="phase6-key-item">${q.num}-${letter(q.a)}</div>`).join('')}</div></section>`).join('');
+    return Array.from(groups.entries()).map(([secId,items]) => `<section id="phase6-section-${esc(secId)}" class="phase6-print-section" data-phase6-section="${esc(secId)}"><h2 class="phase6-print-section-title"><span>${esc(sectionLabel(secId))}</span><small>${items.length} إجابة</small></h2><div class="phase6-answer-key">${items.map(q => `<div class="phase6-key-item">${q.num}-${letter(q.a)}</div>`).join('')}</div></section>`).join('');
   }
 
   function prepare(options={}){
@@ -207,7 +218,7 @@
       </header>
       ${index}
       ${body}
-      <footer class="phase6-print-footer">Eng. Khalid Al-sofi</footer>`;
+      <footer class="phase6-print-footer"><a href="https://wa.me/967771179020" target="_blank" rel="noopener noreferrer">Eng. Khalid Al-sofi</a></footer>`;
     printDoc.dataset.content = safeContent;
     printDoc.dataset.scope = scope;
     printDoc.dataset.count = String(list.length);
