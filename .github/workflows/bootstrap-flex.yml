@@ -1,0 +1,90 @@
+name: Bootstrap flexible learning dev
+
+on:
+  push:
+    branches:
+      - feature/flexible-learning-materials-20261008
+
+permissions:
+  contents: write
+
+jobs:
+  build-test-commit:
+    if: ${{ !contains(github.event.head_commit.message, '[flex-final]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Apply development bundle
+        run: |
+          rm -rf /tmp/flex
+          mkdir -p /tmp/flex
+          unzip -q .dev/flexchanges.zip -d /tmp/flex
+          rsync -a --exclude '__pycache__/' --exclude '.github/' /tmp/flex/ ./
+          python3 .dev/bootstrap_apply.py
+          rm -rf tools/__pycache__
+
+      - name: Validate data and references
+        run: python3 tools/validate.py
+
+      - name: Check JavaScript syntax
+        run: |
+          for file in assets/*.js data/*.js sw.js; do
+            node --check "$file"
+          done
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install Playwright browsers
+        run: |
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps chromium firefox webkit
+
+      - name: Start local site
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/university-http.log 2>&1 &
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/university-http.log
+          exit 1
+
+      - name: Run complete Chromium suite
+        env:
+          BASE_URL: http://127.0.0.1:4173
+        run: npx playwright test tests --browser=chromium --workers=1
+
+      - name: Firefox smoke
+        env:
+          BASE_URL: http://127.0.0.1:4173
+        run: npx playwright test tests/cross-browser-smoke.spec.js --browser=firefox --workers=1
+
+      - name: WebKit smoke
+        env:
+          BASE_URL: http://127.0.0.1:4173
+        run: npx playwright test tests/cross-browser-smoke.spec.js --browser=webkit --workers=1
+
+      - name: Finalize clean development snapshot
+        run: |
+          rm -rf .dev tools/__pycache__
+          rm -f .github/workflows/bootstrap-flex.yml
+          zip -qr /tmp/University_Flexible_Learning_Dev.zip . -x '.git/*'
+
+      - name: Commit tested source to development branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add flexible learning material architecture [flex-final]"
+          git push origin HEAD:feature/flexible-learning-materials-20261008
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: University_Flexible_Learning_Dev
+          path: /tmp/University_Flexible_Learning_Dev.zip
+          retention-days: 7
