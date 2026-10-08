@@ -29,6 +29,11 @@ jobs:
           node --check assets/print-phase6.js
           node --check assets/ui-hotfixes.js
           node --check assets/project-fixes.js
+          node --check assets/materials-hub.js
+          node --check assets/learning-loader.js
+          node --check assets/learning-engine.js
+          node --check data/materials-registry.js
+          node --check data/flutter-learning.js
           node --check data/enterprise-architecture.js
           node --check data/flutter-mcq.js
           node --check data/security-mcq.js
@@ -90,3 +95,21 @@ jobs:
         env:
           BASE_URL: http://127.0.0.1:4173
         run: npx playwright test tests/cross-browser-smoke.spec.js --browser=webkit --workers=1
+
+
+  package-preview:
+    needs: [validate, ui-test, cross-browser-smoke]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Assemble tested preview package
+        run: |
+          mkdir -p /tmp/University-Flexible-Learning-Preview
+          rsync -a --exclude='.git' --exclude='node_modules' ./ /tmp/University-Flexible-Learning-Preview/
+      - name: Upload tested preview ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: University-Flexible-Learning-Preview
+          path: /tmp/University-Flexible-Learning-Preview/
+          include-hidden-files: true
+          retention-days: 7
