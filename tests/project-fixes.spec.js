@@ -68,6 +68,8 @@ test.describe('Project-wide fixes', () => {
 
     await page.locator('#stopQuizBtn').click();
     await expect(page.locator('body')).toHaveClass(/phase4-quiz-review/);
+    await expect(options.nth(answer)).toHaveClass(/correct/);
+    await expect(options.nth(wrong)).toHaveClass(/wrong/);
     const reviewed = await page.evaluate(({answer,wrong,neutral}) => {
       const opts = Array.from(document.querySelector('main .q:not(.hidden) ol.o').children);
       const bg = i => getComputedStyle(opts[i]).backgroundColor;
