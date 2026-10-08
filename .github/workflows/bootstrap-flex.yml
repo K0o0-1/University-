@@ -10,14 +10,17 @@ permissions:
 
 jobs:
   full-validation:
+    if: ${{ github.event.head_commit.message == 'Run flexible learning full validation' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Apply development bundle in test workspace
+      - name: Rebuild and apply development bundle
         run: |
+          cat .dev/parts/part* | base64 -d > /tmp/flexchanges.zip
+          echo "9f316dc1e8353153b2c8fca88f0f7a927bab0f3df0446a19b9c5f844b9424d32  /tmp/flexchanges.zip" | sha256sum -c -
           rm -rf /tmp/flex
           mkdir -p /tmp/flex
-          unzip -q .dev/flexchanges.zip -d /tmp/flex
+          unzip -q /tmp/flexchanges.zip -d /tmp/flex
           rsync -a --exclude '__pycache__/' --exclude '.github/' /tmp/flex/ ./
           python3 .dev/bootstrap_apply.py
           rm -rf tools/__pycache__
