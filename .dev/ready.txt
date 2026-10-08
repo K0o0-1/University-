@@ -1,0 +1,1 @@
+Run full validation for flexible learning material architecture.
