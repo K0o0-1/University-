@@ -22,3 +22,16 @@ test('MCQ and Q&A remain usable in a secondary browser', async ({ page }) => {
     await expect(page.locator('main .q').first()).toBeVisible();
   }
 });
+
+
+test('Learning material remains usable in a secondary browser', async ({ page }) => {
+  await page.goto(`${BASE}/materials/learning.html?id=flutter-learning`);
+  await page.waitForFunction(() => window.LearningEngine?.ready === true);
+  await expect(page.locator('.learning-module')).toHaveCount(4);
+  await expect(page.locator('.learning-chapter-card')).toHaveCount(12);
+  await expect(page.locator('.learning-desktop-nav [data-nav]')).toHaveCount(3);
+  await page.locator('#learningMoreBtn').click();
+  await expect(page.locator('#learningMoreMenu')).toBeVisible();
+  await page.locator('[data-more="print"]').click();
+  await expect(page.locator('#learningPrintDialog')).toBeVisible();
+});

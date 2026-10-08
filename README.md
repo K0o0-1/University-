@@ -10,6 +10,7 @@ https://k0o0-1.github.io/University-/
 
 - Enterprise Architecture — 275 MCQ
 - Flutter — 341 MCQ
+- Flutter Interactive Study — 4 modules / 12 chapters / 61 topics / 341 linked MCQ
 - Information Systems Security & Privacy — 200 MCQ
 - Information Systems Security & Privacy — 100 Q&A
 
@@ -30,6 +31,8 @@ https://k0o0-1.github.io/University-/
 - Local-only progress storage using LocalStorage
 - Backup / restore support
 - Responsive mobile layout
+- Registry-driven materials: add/remove MCQ, Q&A or Learning materials without changing the hub markup
+- Flexible Learning Material schema: Modules → Chapters → Topics → Content Blocks
 
 ## Project Structure
 
@@ -53,6 +56,10 @@ University-/
 │   ├── print-phase6.js
 │   ├── ui-hotfixes.js
 │   ├── project-fixes.js
+│   ├── materials-hub.js
+│   ├── learning-loader.js
+│   ├── learning-engine.js
+│   ├── learning-styles.css
 │   └── pwa-icon.svg
 ├── data/
 │   ├── enterprise-architecture.js
@@ -63,7 +70,8 @@ University-/
 │   ├── enterprise-architecture.html
 │   ├── mcq-flutter.html
 │   ├── mcq-information-security-privacy.html
-│   └── qa-information-security-privacy.html
+│   ├── qa-information-security-privacy.html
+│   └── learning.html
 ├── tests/
 │   ├── ui.spec.js
 │   ├── regression.spec.js
@@ -146,3 +154,12 @@ After every important change:
 
 **Eng. Khalid Al-sofi**  
 WhatsApp: +967 771 179 020
+
+
+## Flexible Material Architecture
+
+The home page is generated from `data/materials-registry.js`. A material can be added or removed through the registry without hard-coding a new card in `index.html`.
+
+Supported material families now include legacy `mcq`, `qa`, and the generic `learning` surface. Learning materials may use optional Modules and Chapters and are composed of Topics and Content Blocks. The Flutter Interactive Study material is the first implementation of this schema.
+
+Question-bank content remains independent from learning content so the same approved bank can be linked to explanations without duplicating or rewriting the questions.

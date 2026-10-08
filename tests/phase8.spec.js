@@ -67,9 +67,9 @@ test.describe('Phase 8 Final End-to-End Acceptance', () => {
     page.on('pageerror', error => errors.push(error.message));
 
     await page.goto(BASE + '/');
-    await expect(page.locator('.material-card')).toHaveCount(4);
+    await expect(page.locator('.material-card')).toHaveCount(5);
     const hrefs = await page.locator('.material-card').evaluateAll(cards => cards.map(card => new URL(card.href).pathname));
-    expect(new Set(hrefs)).toEqual(new Set(MATERIALS.map(material => material.path)));
+    expect(new Set(hrefs)).toEqual(new Set([...MATERIALS.map(material => material.path), '/materials/learning.html']));
 
     for (const material of MATERIALS) {
       await boot(page, material.path);
@@ -295,7 +295,7 @@ test.describe('Phase 8 Final End-to-End Acceptance', () => {
       expect(offlineCount).toBe(275);
 
       await page.goto(BASE + '/', {waitUntil:'domcontentloaded'});
-      await expect(page.locator('.material-card')).toHaveCount(4);
+      await expect(page.locator('.material-card')).toHaveCount(5);
 
       await page.goto(BASE + EA, {waitUntil:'domcontentloaded'});
       await ready(page);
