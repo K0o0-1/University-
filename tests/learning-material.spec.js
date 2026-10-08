@@ -52,7 +52,7 @@ test.describe('Flexible learning material',()=>{
     await ready(page,{fresh:true});
     await openFirstTopic(page);
     const q = await page.evaluate(()=>window.LearningEngine.questions().find(q=>q.topicId==='ch1-t1'));
-    const wrong=[0,1,2,3].find(i=>i!==q.a);
+    const wrong=[0,1,2,3].find(i=>i!==q.answerIndex);
     await page.locator('input[name="studyAnswer"]').nth(wrong).check();
     await expect(page.locator('.learning-option.correct')).toHaveCount(1);
     await expect(page.locator('.learning-option.wrong')).toHaveCount(1);
@@ -91,7 +91,7 @@ test.describe('Flexible learning material',()=>{
     await page.locator('details.learning-advanced').click();
     await page.selectOption('#learningQuizOrder','original');
     await page.locator('#learningStartQuizBtn').click();
-    const info=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('flutter_learning_v1_quiz'));const q=window.LearningEngine.questions().find(x=>x.id===s.qids[0]);return{a:q.a};});
+    const info=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('flutter_learning_v1_quiz'));const q=window.LearningEngine.questions().find(x=>x.id===s.qids[0]);return{a:q.answerIndex};});
     const wrong=[0,1,2,3].find(i=>i!==info.a);
     await page.locator('input[name="quizAnswer"]').nth(wrong).check();
     await page.locator('[data-check-quiz]').click();
@@ -108,7 +108,7 @@ test.describe('Flexible learning material',()=>{
     await page.locator('details.learning-advanced').click();
     await page.selectOption('#learningQuizOrder','original');
     await page.locator('#learningStartQuizBtn').click();
-    const info=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('flutter_learning_v1_quiz'));const q=window.LearningEngine.questions().find(x=>x.id===s.qids[0]);return{a:q.a};});
+    const info=await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('flutter_learning_v1_quiz'));const q=window.LearningEngine.questions().find(x=>x.id===s.qids[0]);return{a:q.answerIndex};});
     await page.locator('input[name="quizAnswer"]').nth(info.a).check();
     await expect(page.locator('.learning-option.correct')).toHaveCount(0);
     await expect(page.locator('.learning-option.wrong')).toHaveCount(0);
