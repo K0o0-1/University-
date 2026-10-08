@@ -1,0 +1,33 @@
+name: Assemble flexible learning development
+
+on:
+  push:
+    branches:
+      - feature/flexible-learning-materials-20261008
+    paths:
+      - '.bootstrap/READY'
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Assemble development snapshot
+        run: |
+          if [ ! -f .bootstrap/READY ]; then
+            echo "Bootstrap already consumed."
+            exit 0
+          fi
+          cat .bootstrap/part-* | base64 -d > /tmp/flexible-changes.zip
+          unzip -oq /tmp/flexible-changes.zip -d .
+          python3 bootstrap_apply.py
+          rm -f bootstrap_apply.py
+          rm -rf .bootstrap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Build flexible learning materials"
+          git push origin HEAD:feature/flexible-learning-materials-20261008
