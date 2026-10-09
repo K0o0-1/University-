@@ -42,6 +42,9 @@
     .phase5-more-summary>.analytics-section>h4{display:none}
     .phase5-more-summary .analytics-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
     .phase5-more-summary .analytics-trend{margin-bottom:0}
+    .phase5-flags-disclosure{margin:0 0 12px;border:1px solid var(--line);border-radius:13px;padding:10px 12px}
+    .phase5-flags-disclosure>summary{cursor:pointer;font-size:.84rem;font-weight:800}
+    .phase5-flags-disclosure .analytics-section{padding:9px 0 0;border:0}
     .phase5-weak-toggle{display:block;width:100%;min-height:40px;margin-top:9px;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--ink);font-family:inherit;font-size:.76rem;font-weight:800;cursor:pointer}
     .phase5-weak-collapsed .weak-list .weak-item:nth-child(n+4){display:none!important}
     .phase5-panel .plus-trend{margin-top:0}
@@ -133,6 +136,7 @@
     const sectionsSection = sectionByTitle(sections,'إحصائيات كل قسم');
     const weakSection = sectionByTitle(sections,'أهم نقاط الضعف');
     const recentSection = sectionByTitle(sections,'آخر الاختبارات');
+    const flaggedDisclosure = content.querySelector('.phase5-flags-disclosure');
     const trendSection = sections.find(section => section.classList.contains('plus-trend'));
     const historySection = sections.find(section => section.classList.contains('plus-history'));
     if (!summarySection || !sectionsSection || !weakSection || !recentSection) return;
@@ -171,6 +175,7 @@
     summaryDetails.appendChild(summarySection);
     overview.append(grid,secondary);
     if (weakSection) { addWeakDisclosure(weakSection); overview.appendChild(weakSection); }
+    if (flaggedDisclosure) overview.appendChild(flaggedDisclosure);
     if (trendSection) overview.appendChild(trendSection);
     const latestHistory = historySection?.querySelector('.history-card');
     if (latestHistory) {

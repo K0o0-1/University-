@@ -144,7 +144,7 @@
     const questions = engine.allQuestions();
     const state = engine.state || {};
     const total = questions.length || 0;
-    const studied = questions.filter(q => !!state.revealed?.[q.id]).length;
+    const studied = questions.filter(q => !!state.revealed?.[q.id] || Number(state.questionStats?.[q.id]?.attempts)>0 || Number(state.correct?.[q.id])>0 || Number(state.wrong?.[q.id])>0).length;
     let mastered = questions.filter(q => !!state.mastered?.[q.id]).length;
     if (window.StudyV2?.getMastery) {
       mastered = questions.filter(q => window.StudyV2.getMastery(q.id)?.key === 'mastered').length;

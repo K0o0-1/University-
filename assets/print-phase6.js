@@ -71,14 +71,19 @@
       .phase6-qnum{display:flex;align-items:center;justify-content:center;min-width:8mm;height:8mm;border:1px solid #555;border-radius:50%;font-weight:800;font-size:8.7pt}
       .phase6-qtext{margin:0;font-size:10.5pt;font-weight:700;overflow-wrap:anywhere}
       .phase6-options{margin:0;padding-inline-start:8mm;list-style:none}
-      .phase6-option{display:grid;grid-template-columns:7mm minmax(0,1fr) 8mm;gap:1.5mm;align-items:start;margin:.8mm 0;padding:1mm 1.5mm;border-radius:1mm;break-inside:avoid}
+      .phase6-option{display:grid;grid-template-columns:7mm minmax(0,1fr);gap:1.5mm;align-items:start;margin:.8mm 0;padding:1mm 1.5mm;border-radius:1mm;break-inside:avoid}
       .phase6-option-label{font-weight:800}
-      .phase6-option.is-answer{border:1px solid #555;background:#f2f2f2;font-weight:700}
-      .phase6-answer-mark{font-weight:900;text-align:center}
+      .phase6-option-cell{min-width:0;overflow-wrap:anywhere}
+      .phase6-option.is-answer{border:0;background:transparent;font-weight:400}
+      .phase6-option-text.is-answer-text{background:#e2e2e2!important;color:#111!important;font-weight:800;box-decoration-break:clone;-webkit-box-decoration-break:clone;padding:0 1mm;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+      .phase6-answer-mark{display:none!important}
       .phase6-qa-answer{margin:2.5mm 0 0;padding:2.5mm 3mm;border-inline-start:3pt solid #555;background:#f3f3f3;break-inside:avoid}
       .phase6-answer-key{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2mm;margin-top:2mm}
       .phase6-key-item{padding:2mm;border:1px solid #aaa;border-radius:1.5mm;text-align:center;font-size:9pt;font-weight:800;break-inside:avoid}
-      .phase6-print-footer{margin-top:8mm;padding-top:3mm;border-top:1px solid #aaa;text-align:center;font-size:8pt;color:#555;break-inside:avoid}
+      .phase6-print-section + .phase6-print-section{break-before:page}
+      .phase6-print-section-title{break-inside:avoid-page}
+      @page{ @bottom-center{content:counter(page);font:9pt Arial,sans-serif;color:#666;} }
+      .phase6-print-footer{display:none!important;margin-top:8mm;padding-top:3mm;border-top:1px solid #aaa;text-align:center;font-size:8pt;color:#555;break-inside:avoid}
       .phase6-print-footer a{color:#444!important;text-decoration:underline!important;text-underline-offset:1.5pt}
       .phase6-print-empty{padding:15mm 0;text-align:center;color:#555}
     }
@@ -179,7 +184,7 @@
   function renderMcqQuestion(q,withAnswer){
     const opts = (q.o || []).map((text,index) => {
       const answer = Number(index) === Number(q.a);
-      return `<li class="phase6-option${withAnswer && answer ? ' is-answer' : ''}"><span class="phase6-option-label">${letter(index)})</span><span>${esc(text)}</span>${withAnswer && answer ? '<span class="phase6-answer-mark">✓</span>' : '<span></span>'}</li>`;
+      return `<li class="phase6-option${withAnswer && answer ? ' is-answer' : ''}"><span class="phase6-option-label">${letter(index)})</span><span class="phase6-option-cell"><span class="phase6-option-text${withAnswer && answer ? ' is-answer-text' : ''}">${esc(text)}</span></span></li>`;
     }).join('');
     return `<article class="phase6-question" data-phase6-qid="${esc(q.id)}"><div class="phase6-qhead"><span class="phase6-qnum">${q.num}</span><p class="phase6-qtext">${esc(q.q)}</p></div><ol class="phase6-options">${opts}</ol></article>`;
   }
@@ -202,6 +207,28 @@
     return Array.from(groups.entries()).map(([secId,items]) => `<section id="phase6-section-${esc(secId)}" class="phase6-print-section" data-phase6-section="${esc(secId)}"><h2 class="phase6-print-section-title"><span>${esc(sectionLabel(secId))}</span><small>${items.length} إجابة</small></h2><div class="phase6-answer-key">${items.map(q => `<div class="phase6-key-item">${q.num}-${letter(q.a)}</div>`).join('')}</div></section>`).join('');
   }
 
+  function authorFooter(){
+    const cfg = window.UniversityPrintConfig || {};
+    const author = typeof cfg.author === 'string' ? cfg.author.trim().slice(0,100) : 'Eng. Khalid Al-sofi';
+    const link = typeof cfg.authorUrl === 'string' ? cfg.authorUrl : 'https://wa.me/967771179020';
+    const validLink = /^https:\/\/[^\s<>"']+$/i.test(link);
+    if (!author) return '';
+    return `<footer class="phase6-print-footer">${validLink ? `<a href="${esc(link)}" rel="noopener noreferrer">${esc(author)}</a>` : esc(author)}</footer>`;
+  }
+
+  function updatePageHeaders(list){
+    let node=document.getElementById('phase6NamedPages');
+    if(!node){node=document.createElement('style');node.id='phase6NamedPages';document.head.appendChild(node);}
+    const infos=[...grouped(list).keys()].map(secId=>({secId,label:sectionLabel(secId)}));
+    // Named page margin boxes repeat the active section on every printed page (Chromium).
+    const author=typeof window.UniversityPrintConfig?.author==='string'?window.UniversityPrintConfig.author.slice(0,100):'Eng. Khalid Al-sofi';
+    node.textContent=`@media print{ @page{ @bottom-left{content:${JSON.stringify(author)};font:8pt Arial,sans-serif;color:#666} } }`+infos.map(({secId,label}) => {
+      const key=String(secId).replace(/[^a-zA-Z0-9-]/g,'');
+      const name=JSON.stringify(label.slice(0,95));
+      return `@media print{ @page phase6-${key}{@top-center{content:${name};font:8pt Arial,sans-serif;color:#555}} #phase6PrintDocument [data-phase6-section="${key}"]{page:phase6-${key}} }`;
+    }).join('\n');
+  }
+
   function prepare(options={}){
     const content = options.content || checked('phase6-content') || 'questions';
     const scope = options.scope || checked('phase6-scope') || 'all';
@@ -218,7 +245,8 @@
       </header>
       ${index}
       ${body}
-      <footer class="phase6-print-footer"><a href="https://wa.me/967771179020" target="_blank" rel="noopener noreferrer">Eng. Khalid Al-sofi</a></footer>`;
+      ${authorFooter()}`;
+    updatePageHeaders(list);
     printDoc.dataset.content = safeContent;
     printDoc.dataset.scope = scope;
     printDoc.dataset.count = String(list.length);

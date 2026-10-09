@@ -125,14 +125,14 @@
         if (label?.textContent === 'النسبة') label.textContent = 'النتيجة';
       });
       let accuracy = metrics.querySelector('[data-project-accuracy]');
-      if (!accuracy) {
+      if (!accuracy && !Array.from(metrics.querySelectorAll('.result-metric')).some(el=>el.querySelector('span')?.textContent==='دقة المجاب')) {
         accuracy = document.createElement('div');
         accuracy.className = 'project-result-accuracy';
         accuracy.dataset.projectAccuracy = 'true';
         accuracy.innerHTML = '<span>دقة المجاب</span>: <b></b>';
         metrics.appendChild(accuracy);
       }
-      accuracy.querySelector('b').textContent = `${result.accuracy}%`;
+      if (accuracy) accuracy.querySelector('b').textContent = `${result.accuracy}%`;
     }
   }
 

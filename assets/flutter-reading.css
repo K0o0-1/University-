@@ -1,0 +1,55 @@
+/* Reading-only enhancement over the approved University v1.6.2 layout.
+   Print remains under Phase 6's unchanged print stylesheet. */
+@media screen {
+  body.learning-page {
+    --flutter-primary: #02569b;
+    --flutter-secondary: var(--learning-text);
+  }
+  body.learning-page.learning-dark {
+    --flutter-primary: #75beef;
+    --flutter-secondary: var(--learning-text);
+  }
+  .flutter-term {font-family:inherit;font-size:inherit;font-weight:800;letter-spacing:0;unicode-bidi:isolate;}
+  .flutter-term--primary {color:var(--flutter-primary)}
+  .flutter-term--secondary {color:var(--flutter-secondary);font-weight:750}
+  /* Source-aligned chapter cards: English first, Arabic under it. */
+  .learning-page:has(.learning-chapter-card) .learning-chapter-card {border-inline-start:3px solid #02569b;}
+  .learning-chapter-card .flutter-card-title {font-family:"Segoe UI",Arial,sans-serif;direction:ltr;text-align:right;unicode-bidi:isolate;color:var(--learning-text);font-size:1.11rem;font-weight:780;line-height:1.5;margin:10px 0 2px;}
+  .flutter-card-subtitle {color:var(--learning-muted);font-size:.9rem;line-height:1.7;margin:0;}
+  .learning-chapter-eyebrow .learning-complete-label {margin-inline-start:auto;}
+  .flutter-chapter-main-title {font-family:"Segoe UI",Arial,sans-serif;text-align:right;direction:ltr;color:var(--learning-text);}
+  .flutter-chapter-subtitle {font-size:1.02rem;color:var(--learning-muted);font-weight:650;margin:4px 0 20px;}
+  /* A single semantic H2 for each topic group, true H3s only for subtopics. */
+  .learning-reading-body .flutter-lesson-group {border-bottom:1px solid var(--learning-line);margin:0;padding:20px 0 18px;}
+  .learning-reading-body .flutter-lesson-group:last-child {border-bottom:0;}
+  .learning-reading-body .flutter-lesson-heading {margin:0 0 15px;display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 12px;color:var(--learning-text);font-size:1.26rem;line-height:1.7;font-weight:850;}
+  .flutter-heading-english {font-family:"Segoe UI",Arial,sans-serif;font-size:.89em;color:#02569b;font-weight:800;unicode-bidi:isolate;white-space:normal;}
+  .learning-reading-body .flutter-lesson-topic {border:0!important;padding:0 0 9px;margin:0!important;}
+  .learning-reading-body .flutter-lesson-topic + .flutter-lesson-topic {padding-top:12px;}
+  .learning-reading-body .flutter-topic-heading {margin:0 0 8px;font-size:1.04rem;line-height:1.6;color:var(--learning-brand);font-weight:780;}
+  .learning-reading-body .learning-facts li {line-height:1.93;margin-bottom:10px;}
+  .flutter-inline-expression {display:inline-block;direction:ltr;unicode-bidi:isolate;font-family:Consolas,"Courier New",monospace;font-weight:750;color:#02569b;background:#edf5fc;border-radius:4px;padding:0 5px;white-space:normal;}
+  body.learning-dark .flutter-inline-expression {color:#8cd4ff;background:#24415b;}
+
+  .flutter-comparison-wrap {max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;border:1px solid var(--learning-line);border-radius:9px;margin:12px 0 18px;}
+  .flutter-comparison-table {width:100%;border-collapse:collapse;min-width:330px;font-size:.91rem;line-height:1.8;text-align:right;}
+  .flutter-comparison-table th,.flutter-comparison-table td{padding:11px 14px;border-bottom:1px solid var(--learning-line);vertical-align:top;text-align:right;}
+  .flutter-comparison-table thead th{background:var(--learning-soft);color:var(--learning-text);font-weight:800;}
+  .flutter-comparison-table tbody tr:last-child :is(th,td){border-bottom:none}
+  .flutter-comparison-table tbody th {font-weight:750;color:var(--learning-text);}
+  .flutter-comparison-table tbody tr:nth-child(even) {background:color-mix(in srgb,var(--learning-soft) 38%,var(--learning-card));}
+  .flutter-compact-pair table {table-layout:fixed;min-width:0;}
+  .flutter-compact-pair th {text-align:center!important;direction:ltr;color:#02569b!important;background:#eff6fd!important;font:800 1rem/1.6 Consolas,"Segoe UI",sans-serif;}
+  .flutter-compact-pair td {width:50%;text-align:center!important;font-size:.9rem;line-height:1.8;}
+  .flutter-compact-pair + .flutter-compact-pair {margin-top:10px;}
+  .flutter-code-sample{direction:ltr;text-align:left;max-width:100%;overflow:hidden;background:#1e1e1e;border:1px solid #3c3c3c;border-radius:9px;margin:10px 0 14px;}
+  .flutter-code-head{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#252526;color:#c7c7c7;padding:5px 13px;font:600 .74rem/1.5 Consolas,'Courier New',monospace;}
+  .flutter-code-copy{appearance:none;background:transparent;border:1px solid #626262;border-radius:5px;color:#f5f5f5;cursor:pointer;padding:4px 9px;font-family:inherit;font-weight:700;font-size:.75rem;}
+  .flutter-code-copy:hover{background:#363636}.flutter-code-copy:focus-visible{outline:3px solid #fbbf24;outline-offset:2px;}
+  .flutter-code-body,.learning-page .flutter-code-body code{background:transparent!important;border:0!important;box-shadow:none!important;color:#d4d4d4!important;font:500 .9rem/1.8 Consolas,'Courier New',monospace!important;padding:0!important;}
+  .flutter-code-body{margin:0!important;padding:13px 16px!important;white-space:pre;overflow-x:auto;text-align:left;direction:ltr;tab-size:2;}
+  .flutter-code-body code{white-space:pre!important;display:inline!important;direction:ltr!important;}
+  .flutter-tok-kw{color:#569cd6}.flutter-tok-type{color:#4ec9b0}.flutter-tok-str{color:#ce9178}.flutter-tok-num{color:#b5cea8}.flutter-tok-com{color:#6a9955}
+  .learning-reading-body .learning-facts .flutter-code-sample{margin-inline:0;}
+  @media(max-width:520px){.learning-reading-body .flutter-lesson-heading{font-size:1.15rem;gap:5px 9px}.flutter-compact-pair td{font-size:.83rem;padding:10px 7px!important}.flutter-comparison-table th,.flutter-comparison-table td{padding:8px 10px;font-size:.84rem}.flutter-code-body{padding:10px 12px!important}.flutter-code-head{padding:5px 10px}}
+}

@@ -1,0 +1,12 @@
+/* Limited Phase 7 accessibility / install UI. No existing color or print redesign. */
+.phase7-skip{position:fixed;right:12px;top:-100px;z-index:100000;background:#102f45;color:#fff!important;padding:12px 16px;border-radius:8px;font-weight:700}
+.phase7-skip:focus{top:12px}
+.phase7-tools{display:inline-flex;align-items:center;flex-wrap:wrap;gap:8px;margin:6px 0}
+.phase7-status[hidden],.phase7-install[hidden]{display:none!important}
+.phase7-status.offline{display:inline-block;background:#fff2d2;color:#543b00;border:1px solid #bd8e2e;border-radius:9px;padding:4px 10px;font-size:.85rem;font-weight:700}
+.phase7-install{font:inherit;font-size:.85rem;cursor:pointer;border-radius:9px;padding:6px 10px;border:1px solid currentColor;background:transparent;color:inherit}
+.phase7-accessibility :is(a,button,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #0b75bd!important;outline-offset:3px!important}
+.phase7-accessibility :is(.flutter-comparison-wrap, .flutter-code-sample):focus-visible{outline:3px solid #0b75bd;outline-offset:3px}
+.phase7-voice-status{display:block;margin-block:5px;color:inherit;opacity:.85;font-size:.85rem}
+@media(prefers-reduced-motion:reduce){html:focus-within{scroll-behavior:auto!important}*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@media print{.phase7-skip,.phase7-tools,.phase7-voice-status{display:none!important}}

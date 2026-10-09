@@ -3,25 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#3b82f6">
+  <meta name="theme-color" content="#234c65">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Learning Material</title>
   <link rel="manifest" href="../manifest.webmanifest">
   <link rel="stylesheet" href="../assets/styles.css">
   <link rel="stylesheet" href="../assets/learning-styles.css">
+  <link rel="stylesheet" href="../assets/learning-design-v4.css">
+  <link rel="stylesheet" href="../assets/flutter-reading.css">
+  <link rel="stylesheet" href="../assets/phase9-sample.css">
+  <link rel="stylesheet" href="../assets/flutter-editorial.css">
+<link rel="apple-touch-icon" href="../assets/pwa-icon-180.png">
+<link rel="stylesheet" href="../assets/pwa-phase7.css">
 </head>
 <body class="learning-page">
   <header class="learning-appbar">
     <div class="learning-appbar-inner">
       <a class="learning-back" href="../index.html" aria-label="العودة للمكتبة">‹</a>
       <button class="learning-brand" type="button" data-nav="study" aria-label="الرئيسية">
-        <span class="learning-brandmark">L</span>
+        <span class="learning-brandmark">U</span>
         <span><strong id="materialTitle">Learning Material</strong><small id="materialSubline">Study • Quiz • Review</small></span>
       </button>
       <nav class="learning-desktop-nav" aria-label="التنقل الرئيسي">
-        <button data-nav="study" class="learning-nav-btn active">📚 Study</button>
-        <button data-nav="quiz" class="learning-nav-btn">📝 Quiz</button>
-        <button data-nav="review" class="learning-nav-btn">🚩 Review</button>
+        <button data-nav="study" class="learning-nav-btn active">المذاكرة</button>
+        <button data-nav="quiz" class="learning-nav-btn">الاختبارات</button>
+        <button data-nav="review" class="learning-nav-btn">المراجعة</button>
         <button id="learningMoreBtn" class="learning-nav-btn" aria-haspopup="menu" aria-expanded="false">المزيد ⋮</button>
       </nav>
     </div>
@@ -40,9 +46,9 @@
   <main id="app" tabindex="-1"><section class="learning-loading">جاري تحميل المادة…</section></main>
 
   <nav class="learning-mobile-nav" aria-label="التنقل على الهاتف">
-    <button data-nav="study" class="active"><span>📚</span><small>Study</small></button>
-    <button data-nav="quiz"><span>📝</span><small>Quiz</small></button>
-    <button data-nav="review"><span>🚩</span><small>Review</small></button>
+    <button data-nav="study" class="active"><span aria-hidden="true">▤</span><small>المذاكرة</small></button>
+    <button data-nav="quiz"><span aria-hidden="true">◫</span><small>الاختبارات</small></button>
+    <button data-nav="review"><span aria-hidden="true">◇</span><small>المراجعة</small></button>
   </nav>
 
   <div id="learningToast" class="learning-toast" role="status" aria-live="polite"></div>
@@ -53,16 +59,17 @@
       <div class="learning-dialog-head"><h2>إعداد الطباعة</h2><button value="cancel" class="learning-icon-btn" aria-label="إغلاق">✕</button></div>
       <label>المحتوى<select id="learningPrintType">
         <option value="content">الشرح فقط</option>
-        <option value="content-examples">الشرح + الأمثلة</option>
         <option value="questions">بنك الأسئلة فقط</option>
         <option value="answers">الأسئلة + الإجابات</option>
+        <option value="complete">كامل: الشرح + الأسئلة + الحل</option>
+        <option value="complete-exam">كامل: الشرح + الأسئلة بدون حلول</option>
         <option value="key">مفتاح الإجابات</option>
       </select></label>
       <label>النطاق<select id="learningPrintScope">
         <option value="all">كل المادة</option>
-        <option value="module">Module محدد</option>
         <option value="chapter">Chapter محدد</option>
-        <option value="topic">Topic محدد</option>
+        <option value="review">🚩 راجع لاحقًا</option>
+        <option value="weak">❌ أخطائي</option>
       </select></label>
       <label id="learningPrintTargetWrap">الاختيار<select id="learningPrintTarget"></select></label>
       <div id="learningPrintSummary" class="learning-print-summary"></div>
@@ -73,6 +80,9 @@
   <dialog id="learningUtilityDialog" class="learning-dialog"><div class="learning-dialog-card wide" id="learningUtilityBody"></div></dialog>
 
   <script src="../data/materials-registry.js"></script>
+  <script src="../assets/registry-core.js"></script>
+  <script src="../assets/voice-phase7.js"></script>
   <script src="../assets/learning-loader.js"></script>
+<script src="../assets/pwa-phase7.js"></script>
 </body>
 </html>

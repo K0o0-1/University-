@@ -27,7 +27,40 @@ const state = {
   streak:0, bestStreak:0,
   quizSession:null, lastQuizWrongIds:[], stateVersion:3
 };
-try{ Object.assign(state, JSON.parse(localStorage.getItem(LS_KEY)||'{}')); }catch(e){}
+// Imported and persisted progress is untrusted. Only known typed fields may enter runtime state.
+const securityObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+const securityCount = v => Number.isSafeInteger(v) && v >= 0 && v <= 1000000000;
+const securityQuestionId = id => typeof id === 'string' && /^(?:q[0-9]{1,6}|qid-[a-z0-9-]{1,80})$/.test(id);
+const securityObjectEntries = (v,max) => securityObject(v) && Object.keys(v).length<=max;
+const securityFlagMap = v => securityObjectEntries(v,1500) && Object.entries(v).every(([id,x])=>securityQuestionId(id) && typeof x==='boolean');
+const securityCountMap = v => securityObjectEntries(v,1500) && Object.entries(v).every(([id,x])=>securityQuestionId(id) && securityCount(x));
+const securitySettings = v => securityObjectEntries(v,24) && Object.entries(v).every(([key,value])=>/^[a-zA-Z][a-zA-Z0-9_-]{0,35}$/.test(key) && (typeof value==='boolean' || (typeof value==='string'&&/^[a-z0-9 _-]{0,100}$/i.test(value)) || securityCount(value)));
+function securityValidSession(q){
+ if(q===null||q===undefined)return true;
+ if(!securityObject(q)||![2,3].includes(q.version)||!['practice','exam'].includes(q.quizKind)||!(window.Phase5Progress ? window.Phase5Progress.validSessionConfig(q.config||{}) : securitySettings(q.config||{}))||!securityCount(q.elapsedMs)||!securityCount(q.streak)||!securityCount(q.bestStreak)||!securityObject(q.score)||!securityCount(q.score.c)||!securityCount(q.score.w))return false;
+ const ids=q.scopeIds||q.visibleIds;
+ if(!Array.isArray(ids)||!ids.length||ids.length>1500||!ids.every(securityQuestionId)||!securityObjectEntries(q.answered||{},1500))return false;
+ if(!Object.entries(q.answered||{}).every(([id,value])=>ids.includes(id) && (MATERIAL.kind==='qa' ? (value==='correct'||value==='wrong') : (Number.isInteger(value)&&value>=0&&value<=5))))return false;
+ if(q.material!==undefined && q.material!==MATERIAL.slug)return false;
+ return true;
+}
+function securityValidLegacyState(x){
+ if(!securityObject(x)||!['quizScore','fav','mastered','wrong','revealed','correct','stateVersion'].some(k=>Object.hasOwn(x,k)))return false;
+ if(!securityObject(x)||!securityFlagMap(x.fav||{})||!securityFlagMap(x.mastered||{})||!securityFlagMap(x.revealed||{})||!securityCountMap(x.wrong||{})||!securityCountMap(x.correct||{})||typeof (x.dark??false)!=='boolean'||!securityCount(x.streak??0)||!securityCount(x.bestStreak??0)||!securityObject(x.quizScore||{})||!securityCount((x.quizScore||{}).c??0)||!securityCount((x.quizScore||{}).w??0))return false;
+ if(!Array.isArray(x.lastQuizWrongIds||[])||(x.lastQuizWrongIds||[]).length>1500||!(x.lastQuizWrongIds||[]).every(securityQuestionId)||!securityValidSession(x.quizSession))return false;
+ if(window.Phase5Progress && !window.Phase5Progress.valid(x,MATERIAL.kind==='qa'?'qa':'mcq'))return false;
+ if(x.stateVersion!==undefined&&![2,3].includes(x.stateVersion))return false;
+ return true;
+}
+function securityCleanLegacyState(x){
+ // Whitelist keys to prevent prototype pollution and unexpected UI data.
+ const clean={};
+ for(const key of ['dark','revealed','mastered','fav','wrong','correct','quizScore','streak','bestStreak','quizSession','lastQuizWrongIds','stateVersion'])if(Object.hasOwn(x,key))clean[key]=x[key];
+ if(window.Phase5Progress)window.Phase5Progress.copy(x,clean);
+ return clean;
+}
+try{ const loaded=JSON.parse(localStorage.getItem(LS_KEY)||'null');if(securityValidLegacyState(loaded))Object.assign(state,securityCleanLegacyState(loaded)); }catch(e){}
+
 ['fav','mastered','wrong','revealed','correct'].forEach(k => state[k] = state[k] || {});
 state.quizScore = state.quizScore || {c:0,w:0};
 state.lastQuizWrongIds = Array.isArray(state.lastQuizWrongIds) ? state.lastQuizWrongIds : [];
@@ -699,6 +732,9 @@ function requestStartQuiz(onlyLastWrong=false){
 }
 
 function startQuiz(onlyLastWrong=false, config={}){
+  // Never silently replace a saved/active attempt (including retakes from history).
+  if (quizStarted && currentMode === 'quiz') { showToast('⏸ أنهِ الاختبار الحالي قبل بدء اختبار جديد'); return; }
+  if (state.quizSession && state.quizSession.version === 3) { showResumeModal(); return; }
   let list = onlyLastWrong
     ? (state.lastQuizWrongIds || []).map(questionById).filter(Boolean)
     : (Array.isArray(config.scopeIds) ? config.scopeIds.map(questionById).filter(Boolean) : filteredItems());
@@ -709,7 +745,8 @@ function startQuiz(onlyLastWrong=false, config={}){
     return;
   }
 
-  activeQuizIds = list.map(q => q.id);
+  activeQuizIds = [...new Set(list.map(q => q.id))];
+  delete state.plusTimerSession;
   quizAnswers = {};
   quizPausedElapsedMs = 0;
   state.quizScore = {c:0,w:0};
@@ -773,10 +810,10 @@ function restoreQuizAnswer(q, chosen){
 
 function resumeQuizSession(session, silent=false){
   if (!session || session.version !== 3 || session.material !== MATERIAL.slug) return false;
-  activeQuizIds = (session.scopeIds || []).filter(id => questionById(id));
+  activeQuizIds = [...new Set((session.scopeIds || []).filter(id => questionById(id)))];
   if (!activeQuizIds.length) { state.quizSession = null; saveState(); return false; }
-  quizAnswers = {...(session.answered || {})};
-  state.quizScore = session.score || {c:0,w:0};
+  quizAnswers = Object.fromEntries(Object.entries(session.answered || {}).filter(([id,v])=>activeQuizIds.includes(id) && Number.isInteger(v) && v>=0 && v<(questionById(id)?.o?.length||0)));
+  state.quizScore = {c:Object.entries(quizAnswers).filter(([id,v])=>v===questionById(id).a).length,w:Object.entries(quizAnswers).filter(([id,v])=>v!==questionById(id).a).length};
   currentStreak = Number(session.streak) || 0;
   state.streak = currentStreak;
   bestStreak = Math.max(Number(session.bestStreak)||0, Number(state.bestStreak)||0);
@@ -821,7 +858,7 @@ function finishQuiz(reason='completed'){
     id:'quiz-' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
     at:new Date().toISOString(), material:MATERIAL.slug, mode:quizKind, reason,
     total, answered, correct:c, wrong:w, unanswered:Math.max(0,total-answered),
-    percent:answered ? Math.round(c/answered*100) : 0,
+    percent:total ? Math.round(c/total*100) : 0, accuracy:answered ? Math.round(c/answered*100) : 0,
     elapsedMs:quizPausedElapsedMs,
     avgMs:answered ? Math.round(quizPausedElapsedMs/answered) : 0,
     wrongIds:[...wrongIds], scopeIds:[...activeQuizIds], answers:{...quizAnswers}, config:{...activeQuizConfig}
@@ -840,8 +877,8 @@ function finishQuiz(reason='completed'){
 function showQuizResult(reason='completed'){
   const c = state.quizScore.c || 0, w = state.quizScore.w || 0;
   const answered = c + w, total = activeQuizIds.length;
-  const pct = answered ? Math.round(c/answered*100) : 0;
-  document.getElementById('qrScore').textContent = c + ' / ' + answered + '  (' + pct + '%)';
+  const pct = total ? Math.round(c/total*100) : 0;
+  document.getElementById('qrScore').textContent = c + ' / ' + total + '  (' + pct + '%)';
   const elapsed = Math.floor(quizPausedElapsedMs/1000);
   const tm = String(Math.floor(elapsed/60)).padStart(2,'0') + ':' + String(elapsed%60).padStart(2,'0');
   const prefix = reason === 'stopped' ? '⏹ تم إيقاف الاختبار.' : reason === 'timeout' ? '⏰ انتهى الوقت.' : '✅ اكتمل الاختبار.';
@@ -935,6 +972,7 @@ function filteredItems(){
     if (mode === 'wrong' && !(state.wrong[item.id] > 0)) return false;
     if (mode === 'unmastered' && !!state.mastered[item.id]) return false;
     if (mode === 'fav' && !state.fav[item.id]) return false;
+    if (mode === 'flagged' && !state.reviewFlags?.[item.id]) return false;
     return true;
   });
 
@@ -1138,18 +1176,20 @@ function downloadBackup(){
 document.getElementById('restoreConfirm').addEventListener('click', () => {
   const file = document.getElementById('restoreFile').files[0];
   if (!file) { alert('⚠️ اختر ملف JSON أولاً'); return; }
+  if (file.size > 5_000_000) { alert('❌ حجم النسخة الاحتياطية غير مقبول'); return; }
   const reader = new FileReader();
   reader.onload = ev => {
     try {
       const data = JSON.parse(ev.target.result);
-      if (!data.state) throw new Error('ملف غير صالح');
-      const sourceMaterial = data.material || data.type || null;
-      if (sourceMaterial && sourceMaterial !== MATERIAL.slug) throw new Error('هذه النسخة الاحتياطية تخص مادة أخرى');
+      if (!securityObject(data)||data.material!==MATERIAL.slug||!securityValidLegacyState(data.state))throw new Error('ملف النسخة الاحتياطية غير صالح أو يخص مادة أخرى');
+      const safeState=securityCleanLegacyState(data.state);
       if (!confirm('⚠️ سيتم استبدال كل تقدمك الحالي. متابعة؟')) return;
-      localStorage.setItem(LS_KEY, JSON.stringify(data.state));
+      // Write once, only after complete validation and explicit confirmation.
+      localStorage.setItem(LS_KEY, JSON.stringify(safeState));
       alert('✅ تمت الاستعادة بنجاح'); location.reload();
     } catch (err) { alert('❌ فشل قراءة الملف: ' + err.message); }
   };
+  reader.onerror=()=>alert('❌ تعذر قراءة الملف');
   reader.readAsText(file);
 });
 
@@ -1301,4 +1341,3 @@ window.StudyEngine = {
 window.addEventListener('beforeunload', () => { if (quizStarted) saveQuizSession(); });
 ensureResumeModal();
 setTimeout(() => { if (state.quizSession && !quizStarted) showResumeModal(); }, 250);
-

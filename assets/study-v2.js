@@ -132,7 +132,8 @@
       ['غير المجاب', result.unanswered],
       [kind === 'qa' ? 'أعرفها' : 'الصحيح', result.correct],
       [kind === 'qa' ? 'لا أعرفها' : 'الخطأ', result.wrong],
-      ['النسبة', result.percent + '%'],
+      ['النتيجة', result.percent + '%'],
+      ['دقة المجاب', (result.accuracy ?? (result.answered ? Math.round(result.correct/result.answered*100) : 0)) + '%'],
       ['الوقت', fmtDuration(result.elapsedMs)],
       ['متوسط السؤال', result.answered ? fmtDuration(result.avgMs) : '—']
     ];
@@ -189,6 +190,7 @@
               <option value="all">كل أسئلة النطاق</option>
               <option value="filtered">النتائج المفلترة حاليًا</option>
               <option value="weak">نقاط الضعف فقط</option>
+              <option value="flagged">🚩 أسئلة علّمتها للمراجعة</option>
             </select>
           </label>
           <label>عدد الأسئلة
@@ -271,13 +273,13 @@
       ? Math.max(1, Math.round(timeValue * 60))
       : timeMode === 'per-question' ? Math.max(1, Math.round(timeValue)) : 0;
 
-    let pool = source === 'filtered' ? engine.filteredItems() : source === 'weak' ? weakQuestions() : questions();
+    let pool = source === 'filtered' ? engine.filteredItems() : source === 'weak' ? weakQuestions() : source === 'flagged' ? questions().filter(q=>state.reviewFlags[q.id]) : questions();
     if (section) pool = pool.filter(q => q.sec === section);
     if (order === 'random') pool = shuffleCopy(pool);
     const requested = countVal === 'all' ? pool.length : Number(countVal);
     if (Number.isFinite(requested) && requested > 0) pool = pool.slice(0, requested);
     if (!pool.length) {
-      engine.showToast(source === 'weak' ? '🎉 لا توجد نقاط ضعف في هذا النطاق' : '⚠️ لا توجد أسئلة في هذا النطاق');
+      engine.showToast(source === 'weak' ? '🎉 لا توجد نقاط ضعف في هذا النطاق' : source === 'flagged' ? '🚩 لا توجد أسئلة معلّمة في هذا النطاق' : '⚠️ لا توجد أسئلة في هذا النطاق');
       return;
     }
 
@@ -367,6 +369,7 @@
       b.title = 'راجع لاحقًا';
       b.textContent = '🚩';
       b.classList.toggle('on', !!state.reviewFlags[q.id]);
+      b.setAttribute('aria-pressed',String(!!state.reviewFlags[q.id]));
       actions.prepend(b);
     });
     document.addEventListener('click', e => {
@@ -377,6 +380,7 @@
       const id = card.dataset.qid;
       state.reviewFlags[id] = !state.reviewFlags[id];
       b.classList.toggle('on', !!state.reviewFlags[id]);
+      b.setAttribute('aria-pressed',String(!!state.reviewFlags[id]));
       persist();
       refreshNavigator();
     });
@@ -466,9 +470,11 @@
     ensureStatsPage();
     const list = questions();
     const history = state.quizHistory || [];
-    const studied = list.filter(q => state.revealed?.[q.id]).length;
+    const studied = list.filter(q => state.revealed?.[q.id] || recFor(q).attempts > 0).length;
     const smartMastered = list.filter(q => mastery(q).key === 'mastered').length;
-    const weakList = weakQuestions().slice(0,10);
+    const allWeak = weakQuestions();
+    const weakList = allWeak.slice(0,10);
+    const flagged = list.filter(q=>state.reviewFlags?.[q.id]);
     const avg = history.length ? Math.round(history.reduce((s,h)=>s+(Number(h.percent)||0),0)/history.length) : 0;
     const best = history.length ? Math.max(...history.map(h=>Number(h.percent)||0)) : 0;
     const trend = history.slice(0,5).reverse().map(h => h.percent + '%').join(' → ') || 'لا توجد اختبارات بعد';
@@ -476,7 +482,7 @@
     const summary = [
       ['تمت الدراسة', `${studied}/${list.length}`],
       ['الإتقان الذكي', `${smartMastered}/${list.length}`],
-      ['نقاط الضعف', weakList.length],
+      ['نقاط الضعف', allWeak.length],
       ['عدد الاختبارات', history.length],
       ['متوسط النتائج', avg + '%'],
       ['أفضل نتيجة', best + '%']
@@ -491,6 +497,8 @@
       return `<button type="button" class="weak-item" data-jump-qid="${esc(q.id)}"><span><b>س${q.num}</b> ${esc(q.q)}</span><small>${m.label} • محاولات ${r.attempts} • دقة ${acc}% • أخطاء ${r.wrong}</small></button>`;
     }).join('') : '<p class="analytics-empty">🎉 لا توجد نقاط ضعف مسجلة حاليًا.</p>';
 
+    const flagHtml = flagged.length ? flagged.map(q => `<button type="button" class="weak-item" data-jump-qid="${esc(q.id)}"><span><b>س${q.num}</b> ${esc(q.q)}</span><small>🚩 محدد للمراجعة</small></button>`).join('') : '<p class="analytics-empty">لا توجد أسئلة علّمتها للمراجعة بعد.</p>';
+
     const histRows = history.length ? history.map(h => `
       <tr><td>${new Date(h.at).toLocaleString('ar')}</td><td>${modeLabel(h.mode)}</td><td>${esc(h.config?.sectionLabel || 'كل الأقسام')}</td><td>${h.answered}/${h.total}</td><td>${h.percent}%</td><td>${fmtDuration(h.elapsedMs)}</td></tr>`).join('')
       : '<tr><td colspan="6">لا يوجد سجل اختبارات حتى الآن.</td></tr>';
@@ -499,6 +507,7 @@
       <section class="analytics-section"><h4>ملخص المادة</h4><div class="analytics-grid">${summary}</div><p class="analytics-trend">آخر النتائج: ${esc(trend)}</p></section>
       <section class="analytics-section"><h4>إحصائيات كل قسم</h4><div class="table-scroll"><table class="analytics-table"><thead><tr><th>القسم</th><th>الأسئلة</th><th>المحاولات</th><th>الدقة</th><th>متقن</th><th>ضعف</th></tr></thead><tbody>${secRows}</tbody></table></div></section>
       <section class="analytics-section"><h4>أهم نقاط الضعف</h4><div class="weak-list">${weakHtml}</div></section>
+      <details class="phase5-flags-disclosure"><summary>🚩 أسئلة معلّمة للمراجعة (${flagged.length})</summary><section class="analytics-section plus-flags"><div class="weak-list">${flagHtml}</div></section></details>
       <section class="analytics-section"><h4>آخر الاختبارات</h4><div class="table-scroll"><table class="analytics-table"><thead><tr><th>التاريخ</th><th>الوضع</th><th>النطاق</th><th>المجاب</th><th>النتيجة</th><th>الوقت</th></tr></thead><tbody>${histRows}</tbody></table></div></section>`;
     window.StudyPlus?.enhanceStatsPage?.();
     document.getElementById('statsPageModal').classList.add('show');

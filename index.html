@@ -7,6 +7,8 @@
   <title>مكتبة المواد الدراسية</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="assets/styles.css">
+<link rel="apple-touch-icon" href="assets/pwa-icon-180.png">
+<link rel="stylesheet" href="assets/pwa-phase7.css">
 </head>
 <body class="hub-page">
   <div class="hub-shell">
@@ -15,7 +17,9 @@
     <footer class="signature" aria-label="Author credit"><a class="signature-card" href="https://wa.me/967771179020" target="_blank" rel="noopener noreferrer"><span class="signature-kicker">DESIGNED &amp; ENGINEERED BY</span><strong>Eng. Khalid Al-sofi</strong><span class="signature-contact">WHATSAPP • +967 771 179 020</span></a></footer>
   </div>
   <script src="data/materials-registry.js"></script>
+<script src="assets/registry-core.js"></script>
   <script src="assets/materials-hub.js"></script>
   <script>if('serviceWorker' in navigator&&location.protocol!=='file:'){navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(err=>console.warn('SW registration failed:',err));}</script>
+<script src="assets/pwa-phase7.js"></script>
 </body>
 </html>

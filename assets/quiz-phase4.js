@@ -22,7 +22,7 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const selectLabel = select => select?.selectedOptions?.[0]?.textContent?.trim() || '';
   const modeLabel = mode => mode === 'exam' ? 'امتحان' : 'تدريب';
-  const sourceLabel = value => ({all:'كل أسئلة النطاق',filtered:'النتائج الحالية',weak:'نقاط الضعف فقط'}[value] || value || 'كل أسئلة النطاق');
+  const sourceLabel = value => ({all:'كل أسئلة النطاق',filtered:'النتائج الحالية',weak:'نقاط الضعف فقط',flagged:'الأسئلة المعلّمة 🚩'}[value] || value || 'كل أسئلة النطاق');
   const orderLabel = value => value === 'random' ? 'عشوائي' : 'بالترتيب';
   const timerLabel = (mode,value) => mode === 'total'
     ? `${value || 0} دقيقة للاختبار`

@@ -1,0 +1,147 @@
+/* Phase 9 — DESIGN CANDIDATE ONLY, awaiting user's Chapter 1 + A4 approval.
+ * Original v1.8.0 tokens and all question data/IDs are left unchanged.
+ * The learning home is shown as a single cohesive preview; other chapters retain prior styling.
+ */
+@media screen {
+body.learning-page:has(.learning-chapter-list){
+  --learning-bg:#f4f7f9;
+  --learning-card:#fff;
+  --learning-text:#172b3e;
+  --learning-muted:#607285;
+  --learning-brand:#02569b;
+  --learning-soft:#eaf4fb;
+  --learning-line:#dbe5ec;
+}
+body.learning-page.learning-dark:has(.learning-chapter-list){
+  --learning-bg:#101a27;--learning-card:#182638;--learning-text:#eff5fa;
+  --learning-muted:#a8b8ca;--learning-brand:#8bcfff;
+  --learning-soft:#23384d;--learning-line:#344a60;
+}
+body.learning-page:has(.learning-chapter-list) .learning-hero{
+  background:linear-gradient(115deg,#fff,#f3faff);border:1px solid #d8e7f1;
+  border-top:4px solid #02569b;border-radius:12px;padding:30px 33px;
+}
+body.learning-page.learning-dark:has(.learning-chapter-list) .learning-hero{background:var(--learning-card);border-color:var(--learning-line);}
+body.learning-page:has(.learning-chapter-list) .learning-hero h1{font-size:clamp(1.55rem,2.8vw,2.05rem);color:var(--learning-text);}
+body.learning-page:has(.learning-chapter-list) .learning-list-heading{border-bottom:1px solid var(--learning-line);padding:0 0 11px;margin:29px 0 16px;}
+body.learning-page:has(.learning-chapter-list) .learning-list-heading h2{font-size:1.28rem;color:var(--learning-text);}
+body.learning-page:has(.learning-chapter-list) .learning-chapters{gap:13px;}
+body.learning-page:has(.learning-chapter-list) .learning-chapter-card{
+  border:1px solid var(--learning-line);border-inline-start:1px solid var(--learning-line);
+  border-radius:12px;background:var(--learning-card);padding:21px 23px;
+  gap:16px;box-shadow:0 2px 9px rgba(16,56,89,.035);transition:border-color .17s,transform .17s;
+}
+body.learning-page:has(.learning-chapter-list) .learning-chapter-card:hover{border-color:#90b9d6;transform:translateY(-1px);}
+body.learning-page:has(.learning-chapter-list) .learning-chapter-eyebrow{font-size:.76rem;gap:8px;color:var(--learning-muted);font-weight:700;}
+body.learning-page:has(.learning-chapter-list) .flutter-card-title{font-size:1.22rem;font-weight:800;line-height:1.35;margin:11px 0 4px;color:var(--learning-text);}
+body.learning-page:has(.learning-chapter-list) .flutter-card-subtitle{font-size:.87rem;color:var(--learning-muted);line-height:1.6;}
+body.learning-page:has(.learning-chapter-list) .learning-chapter-progress{border-top:1px solid var(--learning-line);padding-top:13px;}
+body.learning-page:has(.learning-chapter-list) .learning-progress{height:5px;}
+body.learning-page:has(.learning-chapter-list) .learning-progress>span{background:#0289ca;}
+body.learning-page:has(.learning-chapter-list) .learning-complete-label{background:#e3f5eb;border:1px solid #d1ebde;color:#1f714e;font-size:.72rem;border-radius:100px;padding:0px 9px;margin-inline-start:auto;}
+body.learning-page.learning-dark:has(.learning-chapter-list) .learning-complete-label{background:#1c4437;color:#b6f9d7;}
+body.learning-page:has(.learning-chapter-list) .learning-chapter-actions{justify-content:flex-start;}
+body.learning-page:has(.learning-chapter-list) .learning-chapter-actions .learning-btn{padding:8px 13px;}
+/* Only Chapter 1 is being considered for visual approval. */
+body.learning-page:has(.phase9-editorial-active){
+  --learning-bg:#f5f8fa;--learning-card:#fff;--learning-text:#192c3e;
+  --learning-muted:#647688;--learning-brand:#02569b;--learning-soft:#eaf5fb;
+  --learning-line:#e0e9ef;
+}
+body.learning-page.learning-dark:has(.phase9-editorial-active){
+  --learning-bg:#111b27;--learning-card:#172635;--learning-text:#eef6fa;
+  --learning-muted:#abc0d3;--learning-brand:#8ed1ff;--learning-soft:#213a50;
+  --learning-line:#3a5265;
+}
+body.learning-page:has(.phase9-editorial-active) main{max-width:1040px;}
+body.learning-page:has(.phase9-editorial-active) .learning-chapter-content{max-width:900px;border-radius:13px;border:1px solid var(--learning-line);box-shadow:0 12px 45px rgba(17,58,86,.035);overflow:hidden;}
+body.learning-page:has(.phase9-editorial-active) .learning-reading-header{background:var(--learning-card);border-top:5px solid #02569b;padding:30px 44px 28px;}
+body.learning-page:has(.phase9-editorial-active) .learning-reading-header .learning-eyebrow{font-size:.77rem;color:var(--learning-brand);}
+body.learning-page:has(.phase9-editorial-active) .flutter-chapter-main-title{font-size:clamp(1.85rem,3.4vw,2.45rem);font-weight:820;line-height:1.25;color:var(--learning-text);margin:13px 0 5px;}
+body.learning-page:has(.phase9-editorial-active) .flutter-chapter-subtitle{font-size:1.02rem;font-weight:650;color:var(--learning-muted);margin-bottom:24px;}
+body.learning-page:has(.phase9-editorial-active) .learning-reading-nav{background:var(--learning-card);padding:13px 44px;gap:9px;}
+body.learning-page:has(.phase9-editorial-active) .learning-reading-nav button{border-radius:7px;background:transparent;border:1px solid var(--learning-line);padding:5px 12px;}
+body.learning-page:has(.phase9-editorial-active) .learning-reading-nav button:hover{background:var(--learning-soft);color:var(--learning-brand);}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active{padding:13px 44px 35px;font-size:1rem;line-height:1.95;}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-lesson-group{padding:27px 0 24px;margin:0;border-bottom:1px solid var(--learning-line);}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-lesson-group:last-child{border:0;}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-lesson-heading{
+  margin:0 0 17px;display:flex;flex-wrap:wrap;gap:7px 11px;align-items:baseline;
+  font-size:1.27rem;font-weight:850;line-height:1.6;color:var(--learning-text);
+}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-lesson-heading::before{
+  content:'';align-self:stretch;width:4px;min-height:22px;border-radius:5px;background:#0399d1;margin-inline-end:4px;
+}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-heading-english{font-size:.83em;color:#02569b;font-weight:800;}
+body.learning-page.learning-dark:has(.phase9-editorial-active) .phase9-editorial-active .flutter-heading-english{color:#91d4ff;}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-topic-heading{font-size:1.01rem;font-weight:780;color:var(--learning-brand);margin:7px 0 10px;}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .learning-facts{
+  padding-inline-start:0;padding-inline-end:20px;margin:5px 0 4px;
+}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .learning-facts li{
+  margin:4px 0 9px;padding:0;line-height:1.92;color:var(--learning-text);
+}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .learning-facts li::marker{font-size:.62em;color:#138cbe;}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-term--primary{color:#02569b;font-weight:850;}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-term--secondary{color:var(--learning-text);font-weight:780;}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-inline-expression{color:#02569b;background:#edf6fb;padding:0 5px;border-radius:4px;}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-comparison-wrap{margin:14px 0 20px;border-color:var(--learning-line);border-radius:8px;}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-comparison-table thead th{background:#e7f3fb;color:#02569b;font-size:.94rem;font-weight:800;padding:12px 15px;}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-comparison-table tbody td{background:#fff;padding:11px 17px;font-size:.92rem;text-align:center!important;}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-comparison-table tbody td+td{border-inline-start:1px solid var(--learning-line);}
+body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-code-sample{max-width:100%;border-radius:8px;margin:12px 0;}
+body.learning-page:has(.phase9-editorial-active) .learning-bank-box{margin:0 44px;padding:27px 0;}
+body.learning-page:has(.phase9-editorial-active) .learning-bank-head h2{font-size:1.2rem!important;}
+body.learning-page:has(.phase9-editorial-active) .learning-reading-footer{margin-inline:44px;}
+@media (max-width:700px){
+ body.learning-page:has(.learning-chapter-list) .learning-chapter-card{padding:18px 19px;}
+ body.learning-page:has(.learning-chapter-list) .learning-hero{padding:23px 20px;}
+ body.learning-page:has(.phase9-editorial-active) .learning-chapter-content{border-radius:9px;}
+ body.learning-page:has(.phase9-editorial-active) .learning-reading-header{padding:20px 22px 22px;}
+ body.learning-page:has(.phase9-editorial-active) .learning-reading-nav{padding:11px 16px;}
+ body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active{padding:8px 21px 22px;font-size:.935rem;}
+ body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-lesson-group{padding:23px 0 20px;}
+ body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-lesson-heading{font-size:1.17rem;margin-bottom:13px;gap:5px 8px;}
+ body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .learning-facts{padding-inline-end:17px;}
+ body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-comparison-table th,body.learning-page:has(.phase9-editorial-active) .phase9-editorial-active .flutter-comparison-table td{padding:9px 8px;font-size:.83rem;}
+ body.learning-page:has(.phase9-editorial-active) .learning-bank-box{margin-inline:21px;}
+ body.learning-page:has(.phase9-editorial-active) .learning-reading-footer{margin-inline:21px;}
+}
+}
+/* PRINT prototype: separate single-chapter rendering, other print paths untouched. */
+@media print {
+#learningPrintDocument[data-phase9-preview="ch1"]{color:#1a2634!important;font-size:10pt!important;line-height:1.67!important;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-header{border:0;border-bottom:2pt solid #02569b;padding-bottom:4mm;margin-bottom:5mm;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-header h1{font-family:"Segoe UI",Arial,sans-serif;font-size:17pt;font-weight:800;color:#17314a;margin:1mm 0;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-header p{font-size:9pt;color:#687b8e;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-index{display:none!important;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-chapter{break-before:auto;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-chapter>h2{font-size:15pt;line-height:1.3;color:#17314a;border:0;border-bottom:1pt solid #bcd5e6;padding:0 0 3mm;margin:3mm 0 5mm;}
+#learningPrintDocument[data-phase9-preview="ch1"] .phase9-print-topic{margin:0 0 4.5mm;break-inside:auto;}
+#learningPrintDocument[data-phase9-preview="ch1"] .phase9-print-topic>h3{border-bottom:0;font-size:11pt;font-weight:800;color:#02569b;margin:4mm 0 2mm;line-height:1.7;break-after:avoid-page;}
+#learningPrintDocument[data-phase9-preview="ch1"] .phase9-print-topic>h3::before{content:'│';color:#0399d1;font-weight:900;margin-inline-end:2mm;}
+#learningPrintDocument[data-phase9-preview="ch1"] .phase9-print-topic>ul{padding:0 5mm 0 0;margin:0;}
+#learningPrintDocument[data-phase9-preview="ch1"] .phase9-print-topic li{margin:1mm 0;line-height:1.75;}
+#learningPrintDocument[data-phase9-preview="ch1"] .phase9-print-topic table{width:100%;border-collapse:collapse;table-layout:fixed;direction:rtl;margin:2mm 0 3mm;font-size:9pt;}
+#learningPrintDocument[data-phase9-preview="ch1"] .phase9-print-topic th{background:#eaf4fb!important;border:1pt solid #b7cfde;padding:2mm;color:#02569b;font-weight:800;text-align:center;}
+#learningPrintDocument[data-phase9-preview="ch1"] .phase9-print-topic td{border:1pt solid #d9e5eb;padding:2mm 3mm;text-align:center;}
+#learningPrintDocument[data-phase9-preview="ch1"] .phase9-print-keyword{color:#02569b;font-weight:800;}
+#learningPrintDocument[data-phase9-preview="ch1"] .phase9-print-technical{color:#172739;font-weight:800;}
+#learningPrintDocument[data-phase9-preview="ch1"] .phase9-print-inline{font-family:Consolas,monospace;font-size:.96em;font-weight:700;direction:ltr;unicode-bidi:isolate;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-questions-heading{margin-top:8mm;font-size:12pt;border-bottom:1pt solid #bbd4e5;padding-bottom:2mm;color:#17314a;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-question{border-color:#e1e8ee;border-radius:1mm;padding:2.7mm 3mm;margin:0 0 3.5mm;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-question h3{font-size:10pt;line-height:1.65;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-option-text.correct-text{background:#e1e1e1!important;border:1pt solid #111!important;font-weight:800!important;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-option-label.correct-label{font-weight:900!important;}
+}
+@media print {
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-header{
+  display:block!important;background:#fff!important;background-image:none!important;color:#1a2c3d!important;
+  padding:0 0 4mm!important;margin:0 0 5mm!important;border:0!important;
+  border-bottom:1.5pt solid #02569b!important;border-radius:0!important;text-align:right!important;box-shadow:none!important;
+}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-header>*{color:#1a2c3d!important;text-align:right!important;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-header>div{font:700 8pt/1.5 Arial,sans-serif!important;color:#02569b!important;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-header h1{font-family:Arial,sans-serif!important;font-size:13pt!important;margin:1mm 0!important;color:#1a2c3d!important;}
+#learningPrintDocument[data-phase9-preview="ch1"] .learning-print-header p{font-size:8pt!important;color:#687b8e!important;}
+}
